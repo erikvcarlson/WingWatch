@@ -13,9 +13,12 @@ setup(
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=[], # add any additional packages that 
-        # needs to be installed along with your package. Eg: 'caer'
-        
+        install_requires=[
+                        "pytest==8.2.1",
+                        "pandas=2.1.1",
+                        "numpy==1.26.0",
+                        "scipy==1.13.1"
+                        ],        
         keywords=['python', 'first package'],
         classifiers= [
             "Development Status :: 3 - Alpha",
