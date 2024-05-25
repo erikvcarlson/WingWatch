@@ -1,3 +1,10 @@
+import pandas as pd
+import numpy as np
+import math 
+from scipy import spatial
+from WingWatch.Equipment import antenna as ant
+
+
 class Station:
     def __init__(self,name,lat,long):
         self.name = name #Station name - string
@@ -7,7 +14,7 @@ class Station:
     def add_antenna(self, antenna):
         #check if the item we are adding to the antenna list is an antenna, and then add it to the antenna list
         #return an error if the item is invalid. 
-        if isinstance(antenna, Antenna):
+        if isinstance(antenna, ant.Antenna):
             self.antennas.append(antenna)
             print(f"{antenna.name} added to {self.name}'s antennas.")
         else:
