@@ -1,7 +1,8 @@
 import numpy as np
+from shapely.geometry import Point, Polygon
 
 
-def montecarlo_intersection(station_data:list):
+def montecarlo_intersection(station_data:list,test:bool==0):
     """
     Args:
         station_data: A list of nested lists containing the data for each station
@@ -24,4 +25,49 @@ def montecarlo_intersection(station_data:list):
                 continue
         station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1]))
 
-    return station_shells
+
+    station_shells_stacked = np.row_stack(station_shells)
+
+
+    # Define the range for x and y values
+    x_values_hull = station_shells_stacked[:,0]
+    y_values_hull = station_shells_stacked[:,1]
+    z_values_hull = station_shells_stacked[:,2]
+
+    x_min, x_max = np.min(x_values_hull), np.max(x_values_hull)
+    y_min, y_max = np.min(y_values_hull), np.max(y_values_hull)
+    z_min, z_max = np.min(z_values_hull), np.max(z_values_hull)
+
+    # Generate 1e5 (100,000) random 2D points
+    num_points = int(1e5)
+    x_values = np.random.uniform(x_min, x_max, num_points)
+    y_values = np.random.uniform(y_min, y_max, num_points)
+    z_values = np.random.uniform(z_min, z_max, num_points)
+
+    # Combine x and y values into 2D points
+    points = np.column_stack((x_values, y_values,z_values))
+
+    # Example usage:
+    #hull_vertices = [(0, 0), (0, 1), (1, 1), (1, 0)]
+    #point_to_check = (25000, 0.5)
+
+    result_nested_list = [] 
+
+    for j in station_shells:
+        result_nested_list.append([is_point_inside_hull(j, x) for x in points])
+
+
+    result_nested_list = np.column_stack(result_nested_list)
+
+    index_map = np.all(result_nested_list,axis=1)
+
+    if test == 0:
+        return index_map
+    elif test == 1:
+        return index_map,station_shells
+
+
+def is_point_inside_hull(hull_vertices, point):
+    hull_polygon = Polygon(hull_vertices)
+    point = Point(point)
+    return hull_polygon.contains(point)
