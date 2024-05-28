@@ -4,9 +4,31 @@ from WingWatch.Tools import translation
 
 def clean_motus_Tag_data(data_csv:str,calibration_tags_list,start_date="",end_date=""):
     """
-    start_date = 'YYYY-MM-DD'
-    end_date = 'YYYY-MM-DD'
-    calibration_tags_list = list of ints = []
+    args:
+    data_csv: str; The filepath to the CSV file containing tag data. The 
+    function assumes the CSV file uses commas (",") as the delimeter. 
+
+    calibration_tags_list: list; A list of integers containing the Motus Tag ID #. Note this is NOT
+    the manufacturer's ID number.  
+    
+    start_date: str; Not implemented yet. The start date (YYYY-MM-DD) of when the current station configuration started. 3
+    Used when wanting to exclude data before a station was moved or upgraded to its current configuration.
+
+    end_date: str; Not implemented yet. The end date (YYYY-MM-DD) of when the station left the configuration of question. 
+    Used when wanting to exclude data after a station was moved or upgraded to a new configuration.
+   
+
+    returns:
+    calibration_tags_only: pandas.DataFrame; A pandas dataframe containing the mostly cleaned tag data. The dataframe has the following 
+    columns:
+    
+    tsCorrected: pandas.DateTime: Unix Epoch Time of the tag detection as taken from the station
+    sig: int: The signal strength of the recieved tag detection. (dBm for CTT detections)
+    port: int: The port number for which the detection was recieved. Incrementing starting at n=1
+    motusTagID:int: The Motus Tag Id of the detected tag.
+    mfgID: str: The manufacturer's tag id for the detected tag.
+
+
     """
 
     df_tags_uncleaned = pd.read_csv(data_csv,low_memory=False)
@@ -28,6 +50,21 @@ def clean_motus_Tag_data(data_csv:str,calibration_tags_list,start_date="",end_da
 
 
 def clean_gps_data_csv(data_csv:str):
+    """
+    args:
+    data_csv: str; The filepath to the CSV file containing GPS data. The 
+    function assumes the CSV file uses commas (",") as the delimeter. 
+
+    returns:
+    df_gps_reduced_col: pandas.DataFrame; A pandas dataframe containing the
+    cleaned GPS data. The dataframe has the following columns:
+
+    Y: float: latitude of the GPS Point
+    X: float: longitude of the GPS Point
+    ele: float: The elevation (ASL) of the GPS point
+    time:int: The timestamp of the GPS point in Unix Epoch in seconds (?)
+
+    """
 
     df_gps_uncleaned = pd.read_csv(data_csv)
 
@@ -38,6 +75,23 @@ def clean_gps_data_csv(data_csv:str):
 
 
 def merge_gps_and_tag_data(tag_data,gps_data,stations_of_interest:list):
+    """
+    args:
+    tag_data: pandas.DataFrame; 
+
+    gps_data: pandas.DataFrame;
+
+    stations_of_interest: list; A list of strings containing the names of the stations as they exisit in the 
+    recvDeployName column of the tag_data dataframe.
+
+    returns:
+    merged_df: pandas.DataFrame; A pandas dataframe containing the
+    time-collated tag and GPS data. The dataframe has the following columns:
+
+    #add the dataframe column ouputs here
+    """
+
+
     
     stations_we_care_about = tag_data[tag_data['recvDeployName'].isin(stations_of_interest)]
 
@@ -59,6 +113,9 @@ def merge_gps_and_tag_data(tag_data,gps_data,stations_of_interest:list):
 
 
 def generate_antenna_station_calib_file(data_dataframe,station_of_interest,antenna,ref_lat,ref_long,ref_alt):
+
+
+
 
     station_dataframe = data_dataframe[data_dataframe.recvDeployName==station_of_interest]
     antenna_dataframe = station_dataframe[station_dataframe.port == antenna]
