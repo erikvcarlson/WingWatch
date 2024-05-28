@@ -25,7 +25,7 @@ def test_motecarlo_intersection_single_station():
             continue  
         expected.append(BRR_Station.provide_boundary(data_BR[i][0]-1 ,data_BR[i][1]))
 
-    extra, test_sol = montecarlo.montecarlo_intersection([[data_BR,BRR_Station]],1)
+    extra, extra_1, test_sol = montecarlo.montecarlo_intersection([[data_BR,BRR_Station]],1)
 
     assert np.array_equiv(expected , test_sol)
 
@@ -61,3 +61,16 @@ def test_cart_rot():
     expected = np.array([0,1,0])
     test_sol = rotation.cartesian_rotation(np.array([1,0,0]),90)
     assert np.array_equiv(expected,np.round(test_sol))
+
+def test_convert_back_to_lat_long_EW():
+#the distance between two latitudes seperated by 1/60 of a degree is approximately 1 mile
+    expected = np.array([0,0,0])
+    test_sol = np.round(translation.convert_back_to_lla([0,1843,0],0,1/60,0))
+    assert np.array_equiv(expected,test_sol)
+
+
+def test_convert_back_to_lat_long_NS():
+#the distance between two latitudes seperated by 1/60 of a degree is approximately 1 mile
+    expected = np.array([0,0,0])
+    test_sol = np.round(translation.convert_back_to_lla([1843,0,0],1/60,0,0))
+    assert np.array_equiv(expected,test_sol)

@@ -1,8 +1,8 @@
 import numpy as np
 from shapely.geometry import Point, Polygon
+from WingWatch.Tools import translation
 
-
-def montecarlo_intersection(station_data:list,test:bool==0):
+def montecarlo_intersection(station_data:list,test:bool=0):
     """
     Args:
         station_data: A list of nested lists containing the data for each station
@@ -19,11 +19,18 @@ def montecarlo_intersection(station_data:list,test:bool==0):
 
     station_shells = []
 
+
+    ref_lat = station_data[0][1].lat
+    ref_long = station_data[0][1].long
+    ref_alt = station_data[0][1].alt
+
     for i in range(len(station_data)):
+        offset = translation.XYZ_distance(ref_lat,ref_long,ref_alt,station_data[i][1].lat,station_data[i][1].long,station_data[i][1].alt)
         for j in range(len(station_data[i][0])):
             if station_data[i][0][j][0]-1 >= len(station_data[i][1].antennas): #check to make sure that the port number is not larger than the number of antennas assigned to that port
                 continue
-        station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1]))
+        
+        station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1],offset[0],offset[1],offset[2]))
 
 
     station_shells_stacked = np.row_stack(station_shells)
@@ -62,9 +69,9 @@ def montecarlo_intersection(station_data:list,test:bool==0):
     index_map = np.all(result_nested_list,axis=1)
 
     if test == 0:
-        return index_map
+        return points,index_map
     elif test == 1:
-        return index_map,station_shells
+        return points,index_map,station_shells
 
 
 def is_point_inside_hull(hull_vertices, point):

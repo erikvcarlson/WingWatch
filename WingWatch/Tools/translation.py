@@ -9,3 +9,8 @@ def XYZ_distance(ref_lat:float,ref_long:float,ref_alt:float,off_lat:float,off_lo
         station_offset = [navpy_output[1],navpy_output[0],navpy_output[2]]
 
         return station_offset
+
+def convert_back_to_lla(XYZ:list,ref_lat:float,ref_long:float,ref_alt:float):
+        NED = [XYZ[1],XYZ[0],-XYZ[2]]
+        lat,long,alt = navpy.ned2lla(NED,ref_lat,ref_long,ref_alt,latlon_unit='deg',alt_unit='m')
+        return [lat,long,alt]
