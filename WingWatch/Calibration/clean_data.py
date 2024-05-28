@@ -28,7 +28,6 @@ def clean_motus_Tag_data(data_csv:str,calibration_tags_list,start_date="",end_da
     motusTagID:int: The Motus Tag Id of the detected tag.
     mfgID: str: The manufacturer's tag id for the detected tag.
 
-
     """
 
     df_tags_uncleaned = pd.read_csv(data_csv,low_memory=False)
@@ -37,6 +36,8 @@ def clean_motus_Tag_data(data_csv:str,calibration_tags_list,start_date="",end_da
     df_tags_dated = df_tags_uncleaned[df_tags_uncleaned['ts'] < pd.to_datetime(end_date)]
 
     df_reduced_col = df_tags_dated[['tsCorrected','sig','port','recvDeployName','motusTagID','mfgID']]
+
+    #recvDeployName is the human readable name of the reciever and recv is the serial number 
 
     df_with_station_detections = df_reduced_col.dropna(axis=0)
 
