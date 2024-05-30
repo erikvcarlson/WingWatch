@@ -12,6 +12,7 @@ class Antenna:
     def assign_pattern(self,pattern):
         # the pattern variable is going to be a pandas dataframe read in from our calibration data
         # Define the rotation angle in degrees,use zero for an omni
+
         theta = self.orientation
 
         # Convert degrees to radians

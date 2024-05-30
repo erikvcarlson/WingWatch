@@ -114,15 +114,34 @@ def merge_gps_and_tag_data(tag_data,gps_data,stations_of_interest:list):
 
 
 def generate_antenna_station_calib_file(data_dataframe,station_of_interest,antenna,ref_lat,ref_long,ref_alt):
+    """
+    args:
+    data_dataframe: pandas.DataFrame; Merged Cleaned Tag and Cleaned GPS dataframes
 
+    station_of_interest: string;
+
+    antenna: int; 
+
+    ref_lat: float;
+
+    ref_long: float;
+
+    ref_alt: float; 
+
+    returns:
+    resultant_calibration_file: pandas.DataFrame;  
+
+    #add the dataframe column ouputs here
+    """
 
 
 
     station_dataframe = data_dataframe[data_dataframe.recvDeployName==station_of_interest]
     antenna_dataframe = station_dataframe[station_dataframe.port == antenna]
+    result = antenna_dataframe.apply(lambda row: translation.XYZ_distance(ref_lat, ref_long, ref_alt, row['Y'], row['X'], row['ele']), axis=1)
+    XYZ_dataframe = pd.DataFrame(result.to_list(),columns=['X','Y','Z'])
+    XYZ_dataframe['RSSI'] = antenna_dataframe['sig'].to_list()
 
+    resultant_calibration_file = XYZ_dataframe
 
-
-
-
-    return None
+    return resultant_calibration_file
