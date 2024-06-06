@@ -12,7 +12,7 @@ class Antenna:
     def assign_pattern(self,pattern):
         # the pattern variable is going to be a pandas dataframe read in from our calibration data
         # Define the rotation angle in degrees,use zero for an omni
-
+        
         theta = self.orientation
 
         # Convert degrees to radians
@@ -23,10 +23,10 @@ class Antenna:
         sin_theta = np.sin(theta)
 
         # Apply rotation matrix to X and Y
-        new_x = pattern['X'] * cos_theta - pattern['Y'] * sin_theta
-        new_y = pattern['X'] * sin_theta + pattern['Y'] * cos_theta
+        new_x = pattern.X * cos_theta - pattern.Y * sin_theta
+        new_y = pattern.X * sin_theta + pattern.Y * cos_theta
         
-        rotated_df = pd.DataFrame({'X': new_x,'Y': new_y,'Z': pattern['Z'],'RSSI': pattern['RSSI']})
+        rotated_df = pd.DataFrame({'X': new_x,'Y': new_y,'Z': pattern.Z,'RSSI': pattern.RSSI})
 
         self.rad_pattern = rotated_df
     def convert_to_lat_long(self,station):
@@ -38,8 +38,8 @@ class Antenna:
         lon1 = math.radians(station.long)
 
         # Calculate new latitude and longitude using DataFrame columns
-        lat2 = lat1 + (self.rad_pattern['Y']/ earth_radius)
-        lon2 = lon1 + (self.rad_pattern['X'] / (earth_radius * math.cos(lat1)))
+        lat2 = lat1 + (self.rad_pattern.X/ earth_radius)
+        lon2 = lon1 + (self.rad_pattern.X / (earth_radius * math.cos(lat1)))
         # Convert back to degrees and add the results as new columns
         self.rad_pattern['Latitude'] = np.degrees(lat2)
         self.rad_pattern['Longitude'] = np.degrees(lon2)

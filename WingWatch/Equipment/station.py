@@ -32,8 +32,10 @@ class Station:
         #offset_X - float - the East-West offset from the reference station in meters. Default is 0m
         #offset_Y - float - the North-South offset from the referecne station in meters. Default is 0m 
         
+
         xy = self.antennas[antenna_number].rad_pattern[self.antennas[antenna_number].rad_pattern.RSSI == RSSI_Thresh]
-        
+
+
         x = xy.X + offset_X
         y = xy.Y + offset_Y
         z = xy.Z + offset_Z

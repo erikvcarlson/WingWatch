@@ -38,8 +38,10 @@ def montecarlo_intersection(station_data:list,test:bool=0):
             if station_data[i][0][j][0]-1 >= len(station_data[i][1].antennas): #check to make sure that the port number is not larger than the number of antennas assigned to that port
                 continue
         
-        station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1],offset[0],offset[1],offset[2]))
-
+        try: #need to write in some error handling for station shells that contain NaN data
+            station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1],offset[0],offset[1],offset[2]))
+        except:
+            pass
 
     station_shells_stacked = np.row_stack(station_shells)
 
