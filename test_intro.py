@@ -1,6 +1,6 @@
 from WingWatch.Equipment import station
 from WingWatch.Equipment import antenna
-from WingWatch.Intersections import montecarlo
+from WingWatch.Intersections import montecarlo,tritrioverlap
 from WingWatch.Tools import translation,rotation
 import pandas as pd
 import numpy as np
@@ -74,3 +74,35 @@ def test_convert_back_to_lat_long_NS():
     expected = np.array([0,0,0])
     test_sol = np.round(translation.convert_back_to_lla([1843,0,0],1/60,0,0))
     assert np.array_equiv(expected,test_sol)
+
+
+def test_triangle_intersection_no_intersect():
+   # Example usage
+    p1 = np.array([0, 0, 0])
+    q1 = np.array([1, 0, 0])
+    r1 = np.array([0, 1, 0])
+    p2 = np.array([0, 0, 1])
+    q2 = np.array([1, 0, 1])
+    r2 = np.array([0, 1, 1])
+
+    test_sol = tritrioverlap.triTriOverlapTest3d(p1, q1, r1, p2, q2, r2)
+    expected = 0 
+    assert expected == test_sol
+
+
+def test_triangle_intersection_intersect():
+    #triangle 1(T1) will have verticies (V10,V11,V12)
+
+    V10 = np.array([1,0,0])
+    V11 = np.array([0,1,0])
+    V12 = np.array([0,0,0])
+
+    #triangle 2(T2) will have verticies (V20,V21,V22)
+
+    V20 = np.array([1+0.5,0,0] )
+    V21 = np.array([0,1,0])
+    V22 = np.array([0+0.5,0,0])
+
+    expected = 1
+    test_sol = tritrioverlap.triTriOverlapTest3d(V10, V11, V12, V20, V21, V22)
+    assert expected == test_sol
