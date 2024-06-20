@@ -1,7 +1,7 @@
 from WingWatch.Equipment import station
 from WingWatch.Equipment import antenna
-from WingWatch.Intersections import montecarlo,tritrioverlap
-from WingWatch.Tools import translation,rotation
+from WingWatch.Intersections import montecarlo
+from WingWatch.Tools import translation,rotation, tritrioverlap
 import pandas as pd
 import numpy as np
 
