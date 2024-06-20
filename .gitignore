@@ -3,5 +3,5 @@
 *cache*
 allTagsAll390.csv
 allTagsSub390_1.csv
-.ipynb_checkpoints*
-*vscode*
+.ipynb_checkpoints/
+vscode/
