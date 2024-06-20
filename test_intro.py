@@ -8,7 +8,7 @@ import numpy as np
 
 def test_motecarlo_intersection_single_station():    
     BRR_Station = station.Station('BRR',41.1479, -71.5901)
-    BRR_Comp_Data = pd.read_csv('Fake_Calibration_Data.csv')
+    BRR_Comp_Data = pd.read_csv('tests/Fake_Calibration_Data.csv')
 
     a1 = antenna.Antenna('1','test',0,434)
     a1.assign_pattern(BRR_Comp_Data)
