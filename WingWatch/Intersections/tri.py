@@ -57,13 +57,16 @@ def overlap_of_three_radiation_patterns(station_data):
     
     '''
 
+    #we need to grab the boundary points for each of the shells at the defined RSSI
     station_shells = generate_station_shells(station_data)
-      
+   
+    #Once we have done that we can breakup the station shells data into three seperate components
     station_1_boundary = station_shells[0]
     station_2_boundary = station_shells[1]
     station_3_boundary = station_shells[2]
 
-
+    #We then generate a ConvexHull Object for each of the stations, find the simplicies (I think this is wrong now that I think about it), and then grab the verticies which correspond to their simplices
+    #The reason why I think this is wrong is because we end up with triangulations which cross through the hull. That is not all simplicies are faces 
     station_1_hull = ConvexHull(station_1_boundary)
     station_1_indices = station_1_hull.simplices
     triangulation_station_1 = station_1_boundary[station_1_indices]
