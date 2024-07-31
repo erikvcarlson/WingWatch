@@ -1,3 +1,5 @@
+import numpy as np
+
 def line_intersection(p1, p2, p3, p4):
     """
     Find the intersection of line segments p1p2 and p3p4.
