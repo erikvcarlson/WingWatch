@@ -21,7 +21,7 @@ setup(
                         "shapely==1.8.2",
                         "navpy==1.0",
                         "trimesh==4.4.3",
-                        "pycork-0.1.0"
+                        "pycork==0.1.0"
                         ],        
         keywords=['python', 'first package'],
         classifiers= [

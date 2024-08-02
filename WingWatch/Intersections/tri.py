@@ -9,27 +9,34 @@ import trimesh
 import pycork
 
 
-def generate_station_shells(station_data:list):
+def generate_station_shells(list_of_detections:list):
     station_shells = []
 
     #We use the first antenna in the passed data as a way to measure the offset in the geometries to the other antennas   
-    ref_lat = station_data[0][1].lat
-    ref_long = station_data[0][1].long
-    ref_alt = station_data[0][1].alt
+    ref_lat =list_of_detections[0].station.lat
+    ref_long = list_of_detections[0].station.long
+    ref_alt = list_of_detections[0].station.alt
 
-    for i in range(len(station_data)):
-        station_of_interest = station_data[i][1]
-        detections_on_station = station_data[i][0]
+    for i in range(len(list_of_detections)):
+        station_of_interest = list_of_detections[i].station
         offset = translation.XYZ_distance(ref_lat,ref_long,ref_alt,station_of_interest.lat,station_of_interest.long,station_of_interest.alt)
-        for j in range(len(detections_on_station)):
-            single_detection = detections_on_station[j]
-            antenna_number_of_detection = single_detection[0] - 1
-            #antenna number of the detection is larger than the total number of antennas assigned to the station, skip it
-            if antenna_number_of_detection > len(station_of_interest.antennas): 
-                continue
-            station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1],offset[0],offset[1],offset[2]))
-        #except:
-        #    pass
+                
+        #antenna number of the detection is larger than the total number of antennas assigned to the station, skip it
+        if list_of_detections[i].antenna-1 > len(station_of_interest.antennas): 
+            continue
+        
+        station_shells.append(station_of_interest.provide_boundary(list_of_detections[i].antenna-1,list_of_detections[i].rssi,offset[0],offset[1],offset[2]))
+    
+
+        # for j in range(len(detections_on_station)):
+        #     single_detection = detections_on_station[j]
+        #     antenna_number_of_detection = single_detection[0] - 1
+        #     #antenna number of the detection is larger than the total number of antennas assigned to the station, skip it
+        #     if antenna_number_of_detection > len(station_of_interest.antennas): 
+        #         continue
+        #     station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1],offset[0],offset[1],offset[2]))
+        # #except:
+        # #    pass
 
     return station_shells
 
@@ -57,7 +64,7 @@ def intersect_of_two_triangles(edges_T1,edges_T2):
     return intersections
 
 
-def overlap_of_three_radiation_patterns(station_data):
+def overlap_of_three_radiation_patterns(list_of_detections):
     '''
     station_1_boundary: provided boundary from a command such as 
         = SEL_Station.provide_boundary(0,-98,offset_X=offset_SEL[0],offset_Y=offset_SEL[1],offset_Z=offset_SEL[2]) 
@@ -65,7 +72,7 @@ def overlap_of_three_radiation_patterns(station_data):
     '''
 
     #we need to grab the boundary points for each of the shells at the defined RSSI
-    station_shells = generate_station_shells(station_data)
+    station_shells = generate_station_shells(list_of_detections)
    
     #Once we have done that we can breakup the station shells data into three seperate components
     station_1_boundary = station_shells[0]
