@@ -12,14 +12,20 @@ import pycork
 def generate_station_shells(station_data:list):
     station_shells = []
 
-
+    #We use the first antenna in the passed data as a way to measure the offset in the geometries to the other antennas   
     ref_lat = station_data[0][1].lat
     ref_long = station_data[0][1].long
     ref_alt = station_data[0][1].alt
+
     for i in range(len(station_data)):
-        offset = translation.XYZ_distance(ref_lat,ref_long,ref_alt,station_data[i][1].lat,station_data[i][1].long,station_data[i][1].alt)
-        for j in range(len(station_data[i][0])):
-            if station_data[i][0][j][0]-1 >= len(station_data[i][1].antennas): #check to make sure that the port number is not larger than the number of antennas assigned to that port
+        station_of_interest = station_data[i][1]
+        detections_on_station = station_data[i][0]
+        offset = translation.XYZ_distance(ref_lat,ref_long,ref_alt,station_of_interest.lat,station_of_interest.long,station_of_interest.alt)
+        for j in range(len(detections_on_station)):
+            single_detection = detections_on_station[j]
+            antenna_number_of_detection = single_detection[0] - 1
+            #antenna number of the detection is larger than the total number of antennas assigned to the station, skip it
+            if antenna_number_of_detection > len(station_of_interest.antennas): 
                 continue
             station_shells.append(station_data[i][1].provide_boundary(station_data[i][0][j][0]-1,station_data[i][0][j][1],offset[0],offset[1],offset[2]))
         #except:
