@@ -3,6 +3,8 @@ import numpy as np
 import math 
 from scipy import spatial
 from WingWatch.Equipment import antenna as ant
+import warnings
+
 
 
 class Station:
@@ -26,6 +28,18 @@ class Station:
         print(f"{self.name}'s antennas:")
         for antenna in self.antennas:
             print(f"{antenna.name} ({antenna.frequency} MHz)")
+    
+    def myround(self,n): #round to the first non-zero decimal place
+        if n == 0:
+            return 0
+        sgn = -1 if n < 0 else 1
+        scale = int(-math.floor(math.log10(abs(n))))
+        if scale <= 0:
+            scale = 1
+        factor = 10**scale
+        return sgn*math.floor(abs(n)*factor)/factor
+
+
     def provide_boundary(self,antenna_number,RSSI_Thresh,offset_X = 0, offset_Y = 0,offset_Z = 0):
         #antenna_number - int - which antenna number are we generating a geometry for?
         #RSSI_Thresh - int - the RSSI (dBm) of the detection we are looking to generate a border for
@@ -36,6 +50,21 @@ class Station:
         xy = self.antennas[antenna_number].rad_pattern[self.antennas[antenna_number].rad_pattern.RSSI == RSSI_Thresh]
 
 
+        #if the calibration data does not contain the exact detected rssi for that antenna, we will iterate over weaker detections strengths until xy is not empty.
+        #in theory, I don't actually think the number of iterations is that large as we should automatically just filter to the next calibration strength present in the data
+        #I might need to increase this a value from not empyty to something slightly larger as Convex hull requires a certain number of points to work 
+        
+        if xy.empty == True:
+            increase_by_val = 0
+
+            while xy.empty == True:
+                list_of_data_frame_values_less_than_target_val = self.antennas[antenna_number].rad_pattern[self.antennas[antenna_number].rad_pattern.RSSI < RSSI_Thresh]
+                list_of_data_frame_values_less_than_target_val = list_of_data_frame_values_less_than_target_val.RSSI.drop_duplicates().sort_values()
+                xy = self.antennas[antenna_number].rad_pattern[self.antennas[antenna_number].rad_pattern.RSSI == list_of_data_frame_values_less_than_target_val.iloc[increase_by_val]]
+                difference = self.myround(list_of_data_frame_values_less_than_target_val.iloc[increase_by_val] - RSSI_Thresh)
+                increase_by_val = increase_by_val + 1
+            warnings.warn("Using a weaker signal than detected. Use denser calibration data to avoid this error. The RSSI was " + str(difference) + ' units weaker.')
+        
         x = xy.X + offset_X
         y = xy.Y + offset_Y
         z = xy.Z + offset_Z
