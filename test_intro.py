@@ -6,8 +6,7 @@ from WingWatch.Tools import translation,rotation,point_check
 import pandas as pd
 import numpy as np
 import scipy.spatial as ss
-
-
+from math import isclose
 
 
 
@@ -73,6 +72,82 @@ def test_point_in_center_of_sphere():
     test_sol = point_check.point_in_hull(test_point,tess_sphere)
 
     assert expected == test_sol 
+
+
+def test_bearing_to_standard_angle():
+    # Test standard angles
+    assert rotation.bearing_to_standard_angle(0) == 90
+    assert rotation.bearing_to_standard_angle(90) == 0
+    assert rotation.bearing_to_standard_angle(180) == 270
+    assert rotation.bearing_to_standard_angle(270) == 180
+    
+    # Test angles greater than 360
+    assert rotation.bearing_to_standard_angle(450) == 0  # 450 - 360 = 90 -> standard = 0
+    
+    # Test negative angles
+    assert rotation.bearing_to_standard_angle(-90) == 180
+    assert rotation.bearing_to_standard_angle(-450) == 180  # -450 + 360 = -90 -> standard = 180
+
+def test_cartesian_rotation():
+    # Test rotating around z-axis with known angles
+    
+    data = np.array([[1, 0, 0]])
+    
+    # 90 degrees rotation should place the point on the y-axis
+    rotated_data = rotation.cartesian_rotation(data, 90)
+    
+    rotated_data_X = rotated_data[0, 0]
+    rotated_data_Y = rotated_data[0, 1]
+    rotated_data_Z = rotated_data[0, 2]
+
+    assert isclose(rotated_data_X, 0, abs_tol=1e-9)
+    assert isclose(rotated_data_Y, 1, abs_tol=1e-9)
+    assert isclose(rotated_data_Z, 0, abs_tol=1e-9)
+
+    # 180 degrees rotation should place the point on the negative x-axis
+    rotated_data = rotation.cartesian_rotation(data, 180)
+
+    rotated_data_X = rotated_data[0, 0]
+    rotated_data_Y = rotated_data[0, 1]
+    rotated_data_Z = rotated_data[0, 2]
+
+
+    assert isclose(rotated_data_X, -1, abs_tol=1e-9)
+    assert isclose(rotated_data_Y, 0, abs_tol=1e-9)
+    assert isclose(rotated_data_Z, 0, abs_tol=1e-9)
+
+    # 270 degrees rotation should place the point on the negative y-axis
+    rotated_data = rotation.cartesian_rotation(data, 270)
+    
+    rotated_data_X = rotated_data[0, 0]
+    rotated_data_Y = rotated_data[0, 1]
+    rotated_data_Z = rotated_data[0, 2]
+ 
+    
+    assert isclose(rotated_data_X, 0, abs_tol=1e-9)
+    assert isclose(rotated_data_Y, -1, abs_tol=1e-9)
+    assert isclose(rotated_data_Z, 0, abs_tol=1e-9)
+
+    # 360 degrees rotation should bring it back to the original position
+    rotated_data = rotation.cartesian_rotation(data, 360)
+
+    rotated_data_X = rotated_data[0, 0]
+    rotated_data_Y = rotated_data[0, 1]
+    rotated_data_Z = rotated_data[0, 2]
+
+    assert isclose(rotated_data_X, 1, abs_tol=1e-9)
+    assert isclose(rotated_data_Y, 0, abs_tol=1e-9)
+    assert isclose(rotated_data_Z, 0, abs_tol=1e-9)
+
+    # Test rotating multiple points
+    data = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    rotated_data = rotation.cartesian_rotation(data, 90)
+    
+    expected_rotated_data = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
+    
+    assert np.allclose(rotated_data, expected_rotated_data, atol=1e-9)
+
+
 
 
 

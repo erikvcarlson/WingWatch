@@ -1,12 +1,16 @@
-import tkinter as tk 
-from tkinter.messagebox import showinfo
+from flask import Flask, render_template, redirect, url_for, flash
 
-root = tk.Tk()
+app = Flask(__name__)
+app.secret_key = 'supersecretkey'  # Necessary for flash messages
 
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/show_message', methods=['POST'])
 def show_message():
-    showinfo("Hello World!")
+    flash("Hello World!")
+    return redirect(url_for('home'))
 
-btn = tk.Button(root,text='Click Me!', command = show_message)
-btn.pack()
-
-root.mainloop()
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=80)
