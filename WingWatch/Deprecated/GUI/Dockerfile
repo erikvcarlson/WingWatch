@@ -22,7 +22,9 @@ RUN apt-get update && apt-get install -y \
     python3-tk
 
 # Make port 80 available to the world outside this container
-# EXPOSE 80
+EXPOSE 80
+EXPOSE 5000
+
 # Add other dependencies here
 # Copy your application code
 COPY . /app
@@ -34,7 +36,14 @@ WORKDIR /app
 # Install Python dependencies
 RUN pip3 install -r requirements.txt
 
+# Define environment variable for Flask
+ENV FLASK_APP=application.py
+ENV FLASK_RUN_HOST=0.0.0.0
+EXPOSE 5000
+
+
+
 # Set a default command (optional)
 #CMD ["bash", "-c", "while true; do sleep 1000; done"]
 
-CMD ["python3", "application.py"]
+CMD ["flask", "run"]
