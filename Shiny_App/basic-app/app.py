@@ -9,16 +9,22 @@ import pickle
 import os
 import time
 import glob
+import logging
 
 
-class MyObject:
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='/home/app/example.log', encoding='utf-8', level=logging.DEBUG)
+
+
+
+"""class MyObject:
     def __init__(self, param1, param2):
         self.param1 = param1
         self.param2 = param2
 
     def __repr__(self):
         return f"MyObject(param1={self.param1}, param2={self.param2})"
-
+"""
 
 app_ui = ui.page_fluid(
     ui.layout_columns(
@@ -84,19 +90,25 @@ def server(input, output, session):
     @ui.bind_task_button(button_id="Assign_Pattern")
     @reactive.extended_task
     async def update_station_class(name,ant_number,pattern):
+        try:
+            
+            name = str(name) + '.pkl'
+            os.system('echo ' + name + ' >> debug_file.txt') #this is working, for some reasom the antenna number is not writing to the debug files
+            ant_number = int(ant_number)
+            os.system('echo ' + str(ant_number) + ' >> debug_file.txt')
+            pattern = pd.read_csv(pattern)
+            os.system('echo "pattern read in" >> debug_file.txt')
         
-        name = str(name) + '.pkl'
-        os.system('echo ' + name + '>> debug_file.txt')
-        ant_number = int(ant_number)
-        os.system('echo ' + str(ant_number) + '>> debug_file.txt')
-        pattern = pd.read_csv(pattern)
-        os.system('echo "pattern read in" >> debug_file.txt')
-        Station_1 = load_object_from_disk(name)
-        a1 = antenna.Antenna(ant_number,'test',0,0)
-        a1.assign_pattern(pattern)
-        Station_1.add_antenna(a1)
-        save_object_to_disk(Station_1,'/home/app/' + Station_1.name + '_updated.pkl')
-
+            Station_1 = load_object_from_disk(name)
+            a1 = antenna.Antenna(ant_number,'test',0,0)
+            a1.assign_pattern(pattern)
+            Station_1.add_antenna(a1)
+            save_object_to_disk(Station_1,'/home/app/' + Station_1.name + '_updated.pkl')
+        except Exception as err: 
+            logger.debug(type(name))
+            logger.debug(type(ant_number))
+            logger.debug(type(pattern))
+            logger.error(err)
 
     @reactive.effect
     @reactive.event(input.Assign_Pattern, ignore_none=False)
