@@ -2,7 +2,11 @@ from ipyleaflet import Map,Marker,basemaps
 from ipywidgets import Layout  
 from shiny import App, reactive, ui
 from shinywidgets import output_widget, render_widget  
+from shiny.types import FileInfo
 from WingWatch.Equipment import station,antenna
+from WingWatch.Intersections import tri
+from WingWatch.Tools import point_check as pc
+from WingWatch.Intersections.detection import Detection
 import pandas as pd
 import sys
 import pickle
@@ -10,6 +14,7 @@ import os
 import time
 import glob
 import logging
+import numpy as np
 
 
 logger = logging.getLogger(__name__)
@@ -35,7 +40,16 @@ app_ui = ui.page_fluid(
         ),
         ui.card(
             ui.card_header("Detection Generator"),
-            ui.input_select("select_stat_det", "Select a Station",choices = list(glob.glob('*.pkl'))),
+            ui.input_select("select_stat_det_1", "Station 1",choices = list(glob.glob('*.pkl'))),
+            ui.input_select("select_ant_det_1", "Antenna Number",choices = [1,2,3,4,5]),
+            ui.input_numeric("stat_1_strength","Strength of Station 1 Detection",0),
+            ui.input_select("select_stat_det_2", "Station 2",choices = list(glob.glob('*.pkl'))),
+            ui.input_select("select_ant_det_2", "Antenna Number",choices = [1,2,3,4,5]),
+            ui.input_numeric("stat_2_strength","Strength of Station 2 Detection",0),
+            ui.input_select("select_stat_det_3", "Station 3",choices = list(glob.glob('*.pkl'))),
+            ui.input_select("select_ant_det_3", "Antenna Number",choices = [1,2,3,4,5]),
+            ui.input_numeric("stat_3_strength","Strength of Station 3 Detection",0),
+            ui.input_task_button("Detect", "Go!"),
         ),
     ),
     ui.layout_columns(
@@ -83,7 +97,9 @@ def server(input, output, session):
         file_list_no_ext = [file[:-4] for file in file_list]
 
         ui.update_select("select_stat",choices = file_list_no_ext)
-        ui.update_select("select_stat_det",choices = file_list_no_ext)
+        ui.update_select("select_stat_det_1",choices = file_list_no_ext)
+        ui.update_select("select_stat_det_2",choices = file_list_no_ext)
+        ui.update_select("select_stat_det_3",choices = file_list_no_ext)
 
 
 
@@ -93,29 +109,70 @@ def server(input, output, session):
         try:
             
             name = str(name) + '.pkl'
-            os.system('echo ' + name + ' >> debug_file.txt') #this is working, for some reasom the antenna number is not writing to the debug files
             ant_number = int(ant_number)
-            os.system('echo ' + str(ant_number) + ' >> debug_file.txt')
-            pattern = pd.read_csv(pattern)
-            os.system('echo "pattern read in" >> debug_file.txt')
-        
+            pattern = pd.read_csv(pattern)        
             Station_1 = load_object_from_disk(name)
             a1 = antenna.Antenna(ant_number,'test',0,0)
             a1.assign_pattern(pattern)
             Station_1.add_antenna(a1)
-            save_object_to_disk(Station_1,'/home/app/' + Station_1.name + '_updated.pkl')
+            save_object_to_disk(Station_1,'/home/app/' + Station_1.name + '.pkl')
         except Exception as err: 
-            logger.debug(type(name))
-            logger.debug(type(ant_number))
-            logger.debug(type(pattern))
+            # logger.debug(type(name))
+            # logger.debug(type(ant_number))
+            # logger.debug(type(pattern))
             logger.error(err)
 
     @reactive.effect
     @reactive.event(input.Assign_Pattern, ignore_none=False)
     def handle_click():
-        update_station_class(input.select_stat(), input.ant_name(),input.pattern_entry())
-        time.sleep(1)
-          
+        try:
+            file: list[FileInfo] | None = input.pattern_entry()
+            update_station_class(input.select_stat(), input.ant_name(), file[0]["datapath"])
+            time.sleep(1)
+        except Exception as err:
+            logger.error(err)
+
+
+    @ui.bind_task_button(button_id="Detect")
+    @reactive.extended_task
+    async def calc_intersect():
+        try:
+            logger.info("Loading Stations")
+            nameStat1 = input.select_stat_det_1() + '.pkl'
+            nameStat2 = input.select_stat_det_2() + '.pkl'
+            nameStat3 = input.select_stat_det_3() + '.pkl'
+            
+            Station_1 = load_object_from_disk(nameStat1)
+            Station_2 = load_object_from_disk(nameStat2)
+            Station_3 = load_object_from_disk(nameStat3)
+            logger.info("Stations Loaded Successfully")
+
+            strength_1 = float(input.stat_1_strength())
+            strength_2 = float(input.stat_2_strength())
+            strength_3 = float(input.stat_3_strength())
+
+            antenna_number_1 = input.select_ant_det_1()
+            antenna_number_2 = input.select_ant_det_2()
+            antenna_number_3 = input.select_ant_det_3()
+            logger.info("Other variables saved successfully")
+
+            det1 = Detection(Station_1,strength_1,antenna_number_1)
+            det2 = Detection(Station_2,strength_2,antenna_number_2)
+            det3 = Detection(Station_3,strength_3,antenna_number_3)
+
+            logger.info("Detections Generated")
+            data_to_send_through = [det1,det2,det3]
+
+            intersections,hull_of_intersections = tri.overlap_of_three_radiation_patterns(data_to_send_through)
+
+            pc.point_in_hull(np.array([293,211,27]),hull_of_intersections)
+
+            logger.info("Function Completed Successfully")
+        except Exception as err:
+            logger.error(err)
+
+
+
     ##helper functions
 
     def save_object_to_disk(obj, file_path):

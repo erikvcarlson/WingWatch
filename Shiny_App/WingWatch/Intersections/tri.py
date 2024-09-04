@@ -1,5 +1,5 @@
 from WingWatch.Intersections import montecarlo
-from WingWatch.Tools import line_intersection, tritrioverlap
+#from WingWatch.Tools import line_intersection, tritrioverlap
 from scipy.spatial import ConvexHull
 from WingWatch.Tools import translation
 import numpy as np
