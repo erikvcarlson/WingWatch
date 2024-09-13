@@ -116,6 +116,7 @@ def server(input, output, session):
             a1.assign_pattern(pattern)
             Station_1.add_antenna(a1)
             save_object_to_disk(Station_1,'/home/app/' + Station_1.name + '.pkl')
+            logger.info("A new pattern was assigned to " + Station_1.name)
         except Exception as err: 
             # logger.debug(type(name))
             # logger.debug(type(ant_number))
@@ -133,27 +134,43 @@ def server(input, output, session):
             logger.error(err)
 
 
+    @reactive.effect
+    @reactive.event(input.Detect, ignore_none=False)
+    def handle_click():
+        calc_intersect(input.select_stat_det_1(),input.select_stat_det_2(),input.select_stat_det_3(),input.stat_1_strength(),input.stat_2_strength(),input.stat_3_strength(), input.select_ant_det_1(), input.select_ant_det_2(),input.select_ant_det_3())
+        time.sleep(1)
+        # # Get a list of all *.pkl files
+        # file_list = glob.glob('*.pkl')
+        # # Remove the .pkl extension from each file name
+        # file_list_no_ext = [file[:-4] for file in file_list]
+
+        # ui.update_select("select_stat",choices = file_list_no_ext)
+        # ui.update_select("select_stat_det_1",choices = file_list_no_ext)
+        # ui.update_select("select_stat_det_2",choices = file_list_no_ext)
+        # ui.update_select("select_stat_det_3",choices = file_list_no_ext)
+
+
     @ui.bind_task_button(button_id="Detect")
     @reactive.extended_task
-    async def calc_intersect():
+    async def calc_intersect(select_stat_det_1_str,select_stat_det_2_str,select_stat_det_3_str, stat_1_strength_float,stat_2_strength_float,stat_3_strength_float, select_ant_det_1_int, select_ant_det_2_int,select_ant_det_3_int):
         try:
             logger.info("Loading Stations")
-            nameStat1 = input.select_stat_det_1() + '.pkl'
-            nameStat2 = input.select_stat_det_2() + '.pkl'
-            nameStat3 = input.select_stat_det_3() + '.pkl'
+            nameStat1 = select_stat_det_1_str + '.pkl'
+            nameStat2 = select_stat_det_2_str + '.pkl'
+            nameStat3 = select_stat_det_3_str + '.pkl'
             
             Station_1 = load_object_from_disk(nameStat1)
             Station_2 = load_object_from_disk(nameStat2)
             Station_3 = load_object_from_disk(nameStat3)
             logger.info("Stations Loaded Successfully")
 
-            strength_1 = float(input.stat_1_strength())
-            strength_2 = float(input.stat_2_strength())
-            strength_3 = float(input.stat_3_strength())
+            strength_1 = float(stat_1_strength_float)
+            strength_2 = float(stat_2_strength_float)
+            strength_3 = float(stat_3_strength_float)
 
-            antenna_number_1 = input.select_ant_det_1()
-            antenna_number_2 = input.select_ant_det_2()
-            antenna_number_3 = input.select_ant_det_3()
+            antenna_number_1 = int(select_ant_det_1_int)-1 #need to subtract one as antennas index from 1 and python indexes from 0 
+            antenna_number_2 = int(select_ant_det_2_int)-1
+            antenna_number_3 = int(select_ant_det_3_int)-1
             logger.info("Other variables saved successfully")
 
             det1 = Detection(Station_1,strength_1,antenna_number_1)
@@ -162,11 +179,10 @@ def server(input, output, session):
 
             logger.info("Detections Generated")
             data_to_send_through = [det1,det2,det3]
-
+            logger.info("List of Detections Generated")
             intersections,hull_of_intersections = tri.overlap_of_three_radiation_patterns(data_to_send_through)
-
+            logger.info("Hull of Intersections Generated")
             pc.point_in_hull(np.array([293,211,27]),hull_of_intersections)
-
             logger.info("Function Completed Successfully")
         except Exception as err:
             logger.error(err)
