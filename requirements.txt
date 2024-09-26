@@ -9,3 +9,4 @@ pycork==0.1.0
 PyQt6==6.7.1
 plotly
 matplotlib
+nbformat>=4.2.0

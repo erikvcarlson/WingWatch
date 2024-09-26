@@ -1,0 +1,20 @@
+Begining error logging at 
+Thu Sep 19 19:20:34 2024
+error at /tmp/pip-install-oc46xhbn/pycork_1ae6e9bdd15049ed81f6f420e468a1e6/cork/cork.cpp, line #101: empty mesh input to Cork routine.
+Ending error logging at 
+Thu Sep 19 19:20:59 2024
+
+Begining error logging at 
+Thu Sep 19 19:21:23 2024
+error at /tmp/pip-install-oc46xhbn/pycork_1ae6e9bdd15049ed81f6f420e468a1e6/cork/cork.cpp, line #101: empty mesh input to Cork routine.
+error at /tmp/pip-install-oc46xhbn/pycork_1ae6e9bdd15049ed81f6f420e468a1e6/cork/cork.cpp, line #101: empty mesh input to Cork routine.
+Ending error logging at 
+Thu Sep 19 19:24:19 2024
+
+Begining error logging at 
+Mon Sep 23 20:37:30 2024
+ENSURE FAILED at /tmp/pip-install-oc46xhbn/pycork_1ae6e9bdd15049ed81f6f420e468a1e6/cork/mesh/mesh.isct.tpp, line #488:
+    out.numberofpoints == in.numberofpoints
+Ending error logging at 
+Mon Sep 23 20:37:30 2024
+

@@ -7,7 +7,7 @@ import scipy.spatial as ss
 import WingWatch.Tools.point_check as pc
 import trimesh
 import pycork
-
+import pandas as pd
 
 def generate_station_shells(list_of_detections:list):
     station_shells = []
@@ -118,9 +118,39 @@ def overlap_of_three_radiation_patterns(list_of_detections):
 
     vertsE, trisE = pycork.intersection(vertsD, trisD,vertsC, trisC)
 
-    intersections = vertsE
-    hull_of_intersections = ss.ConvexHull(vertsE)
+    # I can start to exclude negative solutions here, maybe? Will need some heavy testing
 
+    # Define the ranges for X, Y, Z
+    # X = np.linspace(-10000, 10000, 10)
+    # Y = np.linspace(-10000, 10000, 10)
+    # Z = np.linspace(0, 10000, 10)
+
+    # # Generate 100 random points in the 3D box
+    # num_points = 1000    
+    # random_X = np.random.uniform(X.min(), X.max(), num_points)
+    # random_Y = np.random.uniform(Y.min(), Y.max(), num_points)
+    # random_Z = np.random.uniform(Z.min(), Z.max(), num_points)
+
+    # # Stack the coordinates into a single array
+    # points_o_Box = np.column_stack((random_X, random_Y, random_Z))
+
+    # positive_alt_box = ss.ConvexHull(points_o_Box)
+
+    # mesh_3 = trimesh.convex.convex_hull(points_o_Box)
+
+    # vertsF = mesh_3.vertices
+    # trisF = mesh_3.faces
+
+    # vertsG, trisG = pycork.intersection(vertsE, trisE,vertsF, trisF)
+
+    #intersections = vertsG
+    #hull_of_intersections = ss.ConvexHull(vertsG)
+
+    intersections = vertsE
+    hull_of_intersections = ss.ConvexHull(intersections)
+    #I think "ran out of tries to perturb the mesh" means that there were "ambiguous degeneracies" ... not sure 
+    
+    
     #potentially deprecated - EC - 8/1/2024
     # sols = []
     # for i in range(len(station_1_indices)):
