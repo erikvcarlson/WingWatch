@@ -72,48 +72,18 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
     mesh1 = trimesh.convex.convex_hull(expanded_region)
     mesh2 = trimesh.convex.convex_hull(region_static)
 
-    #vertsA = mesh1.vertices
-    #trisA = mesh1.faces
+    vertsA = mesh1.vertices
+    trisA = mesh1.faces
 
-    #vertsB = mesh2.vertices
-    #trisB = mesh2.faces
-    #this is a temp fix to fix a case where the new regions do not overlap. If they do not overlap, I am just returning the larger region
-    mesh3 = trimesh.boolean.intersection([mesh1,mesh2])
-    intersections = mesh3.vertices
-    hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
-    #intersections = expanded_region
-    #hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
+    vertsB = mesh2.vertices
+    trisB = mesh2.faces
+    try: #this is a temp fix to fix a case where the new regions do not overlap. If they do not overlap, I am just returning the larger region
+        vertsD, trisD = pycork.intersection(vertsA, trisA,vertsB, trisB)
+        intersections = vertsD
+        hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
+    except:
+        intersections = expanded_region
+        hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
         
-    return intersections,hull_of_intersections
 
-
-
-def check_constraints_two_region(region_1,region_2,region_3,max_speed,time_stamp_difference):
-    #region_1 is the oldest detection
-    #region_2 is the old detection
-    #region 3 in the new detection 
-
-    
-    
-    #I only want to grow the smaller region.
-    
-                  
-    region_1_hull = ss.ConvexHull(region_1)
-    region_2_hull = ss.ConvexHull(region_2)
-
-    if region_1_hull.volume >= region_2_hull.volume:
-        rad_of_growth = max_speed * time_stamp_difference
-        expanded_region = grow_convex_hull(region_2,rad_of_growth)
-        region_static = region_1
-    elif region_2_hull.volume > region_1_hull.volume:
-        rad_of_growth = max_speed * 2 * time_stamp_difference
-        expanded_region = grow_convex_hull(region_1,rad_of_growth)
-        region_static = region_2
-
-    mesh1 = trimesh.convex.convex_hull(expanded_region)
-    mesh2 = trimesh.convex.convex_hull(region_static)
-    mesh3 = trimesh.convex.convex_hull(region_3)
-    mesh4 = trimesh.boolean.intersection([mesh1,mesh2,mesh3])
-    intersections = mesh3.vertices
-    hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
     return intersections,hull_of_intersections
