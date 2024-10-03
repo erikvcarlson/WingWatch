@@ -50,18 +50,11 @@ def grow_convex_hull(points, r):
 # we can write a recursive function which generates the spheres for each of these detections
 #intersection is an associatative property 
 
-<<<<<<< HEAD
-
-
-
-=======
->>>>>>> 897237698302753d8174ba8165683831c3c6e16c
 def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
     #region_1 is the old detection
     #region 2 in the new detection 
 
     rad_of_growth = max_speed * time_stamp_difference
-<<<<<<< HEAD
     
     #I only want to grow the smaller region.
     
@@ -78,35 +71,12 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
 
     mesh1 = trimesh.convex.convex_hull(expanded_region)
     mesh2 = trimesh.convex.convex_hull(region_static)
-=======
-    expanded_region = grow_convex_hull(region_1,rad_of_growth)
-
-    #region_2 = ss.ConvexHull(region_2)
-    #V1 = expanded_region.volume    
-    #V2 = region_2.volume
-
-
-    # if V1 > V2:
-    #     radius_init = spheres.find_radius_from_vol(V2)
-    #     region_n_points = flight_constraint_bubble(cx2,cy2,cz2,radius_init,time_stamp_difference,max_speed)
-    #     region_m_points = region_1.points
-    # else:
-    #     radius_init = spheres.find_radius_from_vol(V1)
-    #     region_n_points = flight_constraint_bubble(cx1,cy1,cz1,radius_init,time_stamp_difference,max_speed)
-    #     region_m_points = region_2.points
-
-
-    mesh1 = trimesh.convex.convex_hull(expanded_region)
-    mesh2 = trimesh.convex.convex_hull(region_2)
->>>>>>> 897237698302753d8174ba8165683831c3c6e16c
 
     vertsA = mesh1.vertices
     trisA = mesh1.faces
 
     vertsB = mesh2.vertices
     trisB = mesh2.faces
-
-<<<<<<< HEAD
     try: #this is a temp fix to fix a case where the new regions do not overlap. If they do not overlap, I am just returning the larger region
         vertsD, trisD = pycork.intersection(vertsA, trisA,vertsB, trisB)
         intersections = vertsD
@@ -115,42 +85,5 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
         intersections = expanded_region
         hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
         
-=======
-    vertsD, trisD = pycork.intersection(vertsA, trisA,vertsB, trisB)
-
-    intersections = vertsD
-    hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
-  
-    '''
-    region_1 = ss.ConvexHull(region_1)
-    region_2 = ss.ConvexHull(region_2)
-
-
-    
-    
-    cx1 = np.mean(region_1.points[region_1.vertices,0])
-    cy1 = np.mean(region_1.points[region_1.vertices,1])
-    cz1 = np.mean(region_1.points[region_1.vertices,2])
-
-
-    cx2 = np.mean(region_2.points[region_2.vertices,0])
-    cy2 = np.mean(region_2.points[region_2.vertices,1])
-    cz2 = np.mean(region_2.points[region_2.vertices,2])
-
-    V1 = region_1.volume
-    V2 = region_2.volume
-
-    if V1 > V2:
-        radius_init = spheres.find_radius_from_vol(V2)
-        region_n_points = flight_constraint_bubble(cx2,cy2,cz2,radius_init,time_stamp_difference,max_speed)
-        region_m_points = region_1.points
-    else:
-        radius_init = spheres.find_radius_from_vol(V1)
-        region_n_points = flight_constraint_bubble(cx1,cy1,cz1,radius_init,time_stamp_difference,max_speed)
-        region_m_points = region_2.points
-    '''    
-    #region_n = ss.ConvexHull(region_n_points)
-
->>>>>>> 897237698302753d8174ba8165683831c3c6e16c
 
     return intersections,hull_of_intersections

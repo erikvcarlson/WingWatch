@@ -45,3 +45,9 @@ Thu Oct  3 16:15:09 2024
 
 =======
 >>>>>>> 897237698302753d8174ba8165683831c3c6e16c
+Begining error logging at 
+Thu Oct  3 17:15:16 2024
+error at /tmp/pip-install-vao6aaqr/pycork_f311eebebc7842a99e6033bd1c111839/cork/mesh/mesh.isct.tpp, line #1050: Ran out of tries to perturb the mesh
+Ending error logging at 
+Thu Oct  3 17:15:16 2024
+
