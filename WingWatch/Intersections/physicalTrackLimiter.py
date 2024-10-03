@@ -50,11 +50,35 @@ def grow_convex_hull(points, r):
 # we can write a recursive function which generates the spheres for each of these detections
 #intersection is an associatative property 
 
+<<<<<<< HEAD
+
+
+
+=======
+>>>>>>> 897237698302753d8174ba8165683831c3c6e16c
 def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
     #region_1 is the old detection
     #region 2 in the new detection 
 
     rad_of_growth = max_speed * time_stamp_difference
+<<<<<<< HEAD
+    
+    #I only want to grow the smaller region.
+    
+                  
+    region_1_hull = ss.ConvexHull(region_1)
+    region_2_hull = ss.ConvexHull(region_2)
+
+    if region_1_hull.volume >= region_2_hull.volume:
+        expanded_region = grow_convex_hull(region_2,rad_of_growth)
+        region_static = region_1
+    elif region_2_hull.volume > region_1_hull.volume:
+        expanded_region = grow_convex_hull(region_1,rad_of_growth)
+        region_static = region_2
+
+    mesh1 = trimesh.convex.convex_hull(expanded_region)
+    mesh2 = trimesh.convex.convex_hull(region_static)
+=======
     expanded_region = grow_convex_hull(region_1,rad_of_growth)
 
     #region_2 = ss.ConvexHull(region_2)
@@ -74,6 +98,7 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
 
     mesh1 = trimesh.convex.convex_hull(expanded_region)
     mesh2 = trimesh.convex.convex_hull(region_2)
+>>>>>>> 897237698302753d8174ba8165683831c3c6e16c
 
     vertsA = mesh1.vertices
     trisA = mesh1.faces
@@ -81,6 +106,16 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
     vertsB = mesh2.vertices
     trisB = mesh2.faces
 
+<<<<<<< HEAD
+    try: #this is a temp fix to fix a case where the new regions do not overlap. If they do not overlap, I am just returning the larger region
+        vertsD, trisD = pycork.intersection(vertsA, trisA,vertsB, trisB)
+        intersections = vertsD
+        hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
+    except:
+        intersections = expanded_region
+        hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
+        
+=======
     vertsD, trisD = pycork.intersection(vertsA, trisA,vertsB, trisB)
 
     intersections = vertsD
@@ -116,5 +151,6 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
     '''    
     #region_n = ss.ConvexHull(region_n_points)
 
+>>>>>>> 897237698302753d8174ba8165683831c3c6e16c
 
     return intersections,hull_of_intersections

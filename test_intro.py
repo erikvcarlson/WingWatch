@@ -181,7 +181,11 @@ def test_detection_strengths_different_distances():
     assert result[1] == pytest.approx(np.round(20 * np.log10(4 * np.pi * rad_2)))
     assert result[2] == pytest.approx(np.round(20 * np.log10(4 * np.pi * rad_3)))
 
+<<<<<<< HEAD
+def test_detection_strengths_same_station():
+=======
 def test_detection_strengths_same_station():ConvexHull
+>>>>>>> 897237698302753d8174ba8165683831c3c6e16c
     point = np.array([0, 0, 0])
     station_1 = np.array([1, 0, 0])
     station_2 = np.array([1, 0, 0])
