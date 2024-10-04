@@ -1,7 +1,6 @@
 from WingWatch.Intersections.detection import Detection
 from WingWatch.Intersections import tri
 import trimesh
-import pycork
 from WingWatch.Tools import spheres
 import numpy as np 
 import scipy.spatial as ss
@@ -92,8 +91,6 @@ def check_constraints_two_region(region_1,region_2,region_3,max_speed,time_stamp
     #region_1 is the oldest detection
     #region_2 is the old detection
     #region 3 in the new detection 
-
-    
     
     #I only want to grow the smaller region.
     

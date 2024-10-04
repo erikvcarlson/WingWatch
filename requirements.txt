@@ -5,9 +5,9 @@ scipy==1.13.1
 shapely==1.8.2
 navpy==1.0
 trimesh==4.4.3
-pycork==0.1.0
 PyQt6==6.7.1
 plotly
-matplotlib
+matplotlib>=3.8
 nbformat>=4.2.0
 manifold3d
+pandas-stubs

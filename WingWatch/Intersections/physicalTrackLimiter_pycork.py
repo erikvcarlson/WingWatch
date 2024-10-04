@@ -1,7 +1,6 @@
 from WingWatch.Intersections.detection import Detection
 from WingWatch.Intersections import tri
 import trimesh
-import pycork
 from WingWatch.Tools import spheres
 import numpy as np 
 import scipy.spatial as ss
