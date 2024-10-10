@@ -23,7 +23,7 @@ USER app
 
 
 COPY basic-app/requirements.txt .
-COPY ../WingWatch /home/app/WingWatch
+COPY WingWatch /home/app/WingWatch
 #/Users/erikcarlson/Research/WingWatch/Shiny_App/Dockerfile
 
 RUN pip3 install --no-cache-dir -r requirements.txt
