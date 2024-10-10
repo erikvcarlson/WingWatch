@@ -1,0 +1,27 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload CSV and Display Plotly Graph</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Upload CSV File</h1>
+    
+    <!-- File upload form -->
+    <form action="/" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="Upload">
+    </form>
+    
+    <!-- Placeholder for Plotly graph -->
+    {% if graph_json %}
+        <div id="plotly-div"></div>
+        <script>
+            var graphJSON = JSON.parse(`{{ graph_json | safe }}`);
+            Plotly.newPlot('plotly-div', graphJSON.data, graphJSON.layout);
+        </script>
+    {% endif %}
+</body>
+</html>
