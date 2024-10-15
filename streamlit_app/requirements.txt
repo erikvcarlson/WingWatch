@@ -10,3 +10,4 @@ matplotlib
 ipyleaflet
 streamlit
 altair
+streamlit_js

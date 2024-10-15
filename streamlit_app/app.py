@@ -1,40 +1,44 @@
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
+import st_local_storage
+from WingWatch.Equipment import station, antenna
+from WingWatch.Intersections import tri
+from WingWatch.Tools import point_check as pc
+from WingWatch.Intersections.detection import Detection
 
-"""
-# Welcome to Streamlit!
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+st_ls = st_local_storage.StLocalStorage()
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+try:
+    station_list = st_ls['stationList']
+    if station_list == None:
+        raise TypeError
+    st.write("Used Old Storage")
+except:
+    station_list = []
+    st_ls['stationList'] = station_list
+    st.write("Intialized Storage")
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+## Generate a Station
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+station_name = st.text_input("Station Name",value="Default Station",max_chars=50,key='name_stat')
+latStat = st.number_input("Latitude of Station: ",min_value = -90, max_value= 90,value = 41,key='lat_stat')
+longStat = st.number_input("Longitude of Station: ",min_value = -180, max_value= 180,value = -71,key='long_stat')
+clicked = st.button("Generate")
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+if clicked == 1:
+    stat1 = station.Station(station_name,latStat,longStat) 
+    station_list.append(stat1)
+    st.write("Success")
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+#key = st.text_input("Key")
+#value = st.text_input("Value")
+#if st.button("Save"):
+#    st_ls[key] = value
+
+#if st.button("Delete"):
+#    del st_ls[key]
+
+#if key:
+#    f"Current value of {key} is:"
+#    st.write(st_ls[key])
