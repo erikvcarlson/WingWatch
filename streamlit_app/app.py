@@ -6,24 +6,29 @@ from WingWatch.Tools import point_check as pc
 from WingWatch.Intersections.detection import Detection
 
 
-st_ls = st_local_storage.StLocalStorage()
 
-try:
-    station_list = st_ls['stationList']
-    if station_list == None:
-        raise TypeError
-    st.write("Used Old Storage")
-except:
-    station_list = []
-    st_ls['stationList'] = station_list
-    st.write("Intialized Storage")
+#this adds reactivity to the app by reinalizing items at the start of each run
+if 'gen_station' not in st.session_state:
+    st.session_state.gen_station = 0
+
+#st_ls = st_local_storage.StLocalStorage()
+
+# try:
+#     station_list = st_ls['stationList']
+#     if station_list == None:
+#         raise TypeError
+#     st.write("Used Old Storage")
+# except:
+#     station_list = []
+#     st_ls['stationList'] = station_list
+#     st.write("Intialized Storage")
 
 ## Generate a Station
 
 station_name = st.text_input("Station Name",value="Default Station",max_chars=50,key='name_stat')
 latStat = st.number_input("Latitude of Station: ",min_value = -90, max_value= 90,value = 41,key='lat_stat')
 longStat = st.number_input("Longitude of Station: ",min_value = -180, max_value= 180,value = -71,key='long_stat')
-clicked = st.button("Generate")
+clicked = st.button("Generate",key="gen_station")
 
 if clicked == 1:
     stat1 = station.Station(station_name,latStat,longStat) 

@@ -14,89 +14,32 @@ import logging
 import numpy as np
 import pickle
 import shutil
-from fastapi import FastAPI, Request, Response
-from starlette.middleware.sessions import SessionMiddleware
-import uuid
-import threading
 
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='/home/app/example.log', encoding='utf-8', level=logging.DEBUG)
 
-# FastAPI app with session management middleware
-app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="your_secret_key")
-
-# Constants
-MAX_AGE = 30 * 24 * 60 * 60  # 30 days in seconds
-
-# Utility Functions
-def generate_session_id():
-    """Generate a unique session ID."""
-    return str(uuid.uuid4())
-
-def get_session_id(request: Request, response: Response):
-    """Retrieve or generate a session ID and store it in a cookie."""
-    session_id = request.cookies.get('session_id')
-    if not session_id:
-        session_id = generate_session_id()
-        response.set_cookie(key='session_id', value=session_id, max_age=MAX_AGE, httponly=True)
-    return session_id
-
-def get_temp_dir(session_id):
-    """Create or return the temp directory for a session."""
-    temp_dir = f'/tmp/{session_id}/'
-    os.makedirs(temp_dir, exist_ok=True)
-    return temp_dir
-
-def save_object_to_disk(obj, file_path):
-    """Save an object to disk using pickle."""
-    with open(file_path, 'wb') as file:
-        pickle.dump(obj, file)
-
-def load_object_from_disk(file_path):
-    """Load an object from disk using pickle."""
-    with open(file_path, 'rb') as file:
-        return pickle.load(file)
-
-def save_user_data(obj, session_id, filename):
-    """Save user data to a session-specific temp directory."""
-    temp_dir = get_temp_dir(session_id)
-    file_path = os.path.join(temp_dir, filename)
-    save_object_to_disk(obj, file_path)
-
-def cleanup_temp_dir():
-    """Clean up temp directories older than 30 days."""
-    current_time = time.time()
-    for dirpath, dirnames, _ in os.walk('/tmp/'):
-        for dirname in dirnames:
-            dir_full_path = os.path.join(dirpath, dirname)
-            if os.path.isdir(dir_full_path):
-                creation_time = os.path.getctime(dir_full_path)
-                if current_time - creation_time > MAX_AGE:
-                    shutil.rmtree(dir_full_path)
-                    logger.info(f"Removed old directory: {dir_full_path}")
-
-def schedule_cleanup():
-    """Schedule the cleanup task to run daily."""
-    while True:
-        cleanup_temp_dir()
-        time.sleep(24 * 60 * 60)  # Sleep for one day
 
 # Shiny app UI
-app_ui = ui.page_fluid(
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        ui.input_numeric("user", "User Number", 1000, min=1000, max=9999),
+        ui.input_task_button("user_select", "Go!"),      
+        open="closed", 
+        bg="#f8f8f8",    
+        ),
     ui.layout_columns(
         ui.card("Data Input"),
         ui.card(ui.card_header("Map"), output_widget("map")),
         ui.card(
             ui.card_header("Detection Generator"),
-            ui.input_select("select_stat_det_1", "Station 1", choices=list(glob.glob('*.pkl'))),
+            ui.input_select("select_stat_det_1", "Station 1", choices=list()),
             ui.input_select("select_ant_det_1", "Antenna Number", choices=[1, 2, 3, 4, 5]),
             ui.input_numeric("stat_1_strength", "Strength of Station 1 Detection", 0),
-            ui.input_select("select_stat_det_2", "Station 2", choices=list(glob.glob('*.pkl'))),
+            ui.input_select("select_stat_det_2", "Station 2", choices=list()),
             ui.input_select("select_ant_det_2", "Antenna Number", choices=[1, 2, 3, 4, 5]),
             ui.input_numeric("stat_2_strength", "Strength of Station 2 Detection", 0),
-            ui.input_select("select_stat_det_3", "Station 3", choices=list(glob.glob('*.pkl'))),
+            ui.input_select("select_stat_det_3", "Station 3", choices=list()),
             ui.input_select("select_ant_det_3", "Antenna Number", choices=[1, 2, 3, 4, 5]),
             ui.input_numeric("stat_3_strength", "Strength of Station 3 Detection", 0),
             ui.input_task_button("Detect", "Go!")
@@ -109,7 +52,7 @@ app_ui = ui.page_fluid(
             ui.input_numeric("lat_val_stat", "Latitude", 41, min=-90, max=90),
             ui.input_numeric("long_val_stat", "Longitude", -71, min=-180, max=180),
             ui.input_task_button("generate_station", "Generate"),
-            ui.input_select("select_stat", "Select a Station", choices=list(glob.glob('*.pkl'))),
+            ui.input_select("select_stat", "Select a Station", choices=list()),
             ui.input_numeric("ant_name", "Antenna Number", 1, min=1),
             ui.input_file("pattern_entry", "CSV for Pattern", accept='.csv'),
             ui.input_task_button("Assign_Pattern", "Assign Pattern")
@@ -120,8 +63,31 @@ app_ui = ui.page_fluid(
 )
 
 # Shiny app server logic
-def server(input, output, session):
-    session_id = get_session_id(session.request, session.response)
+def server(input,output,session):
+    user_working_dir = reactive.Value('/tmp/users/')
+
+    # Function to handle user button click (user_select)
+    @reactive.Effect
+    @reactive.event(input.user_select)  # React to button click
+    def update_user_directory():
+        # Get user input
+        user = input.user()
+
+        # If user is 1000, generate a random user ID between 10000 and 11000
+        if user == 1000:
+            user = np.random.randint(10000, 11000)
+        
+        new_dir = f'/tmp/users/{user}/'
+        user_working_dir.set(new_dir)
+        
+        # Create directory if it doesn't exist
+        if not os.path.exists(user_working_dir.get()):
+            os.makedirs(user_working_dir.get())
+            
+        # Reactive output to provide choices for input_select based on user_working_dir
+        stations = glob.glob(user_working_dir.get() + '*.pkl')
+        time.sleep(1)
+        logger.info('Directory Function Ran')
 
     @render_widget
     def map():
@@ -135,16 +101,18 @@ def server(input, output, session):
     @ui.bind_task_button(button_id="generate_station")
     @reactive.extended_task
     async def write_station_out(stationName, latValStat, longValStat):
+        logger.info('Intializing Station Function')
         Station_1 = station.Station(stationName, latValStat, longValStat)
-        filename = f'{Station_1.name}.pkl'
-        save_user_data(Station_1, session_id, filename)
+        logger.info(f"Station Generated. Current Working Directory: {user_working_dir.get()}")
+        filename = user_working_dir.get() + f'{Station_1.name}.pkl'
+        save_user_data(Station_1, filename)
 
     @reactive.effect
     @reactive.event(input.generate_station, ignore_none=False)
     def handle_click():
         write_station_out(input.station_name(), float(input.lat_val_stat()), float(input.long_val_stat()))
         time.sleep(1)
-        file_list = glob.glob('*.pkl')
+        file_list =  glob.glob(user_working_dir.get() +'*.pkl')
         file_list_no_ext = [file[:-4] for file in file_list]
         ui.update_select("select_stat", choices=file_list_no_ext)
         ui.update_select("select_stat_det_1", choices=file_list_no_ext)
@@ -155,14 +123,14 @@ def server(input, output, session):
     @reactive.extended_task
     async def update_station_class(name, ant_number, pattern):
         try:
-            name = f'{name}.pkl'
+            name = filename = user_working_dir.get() + f'{name}.pkl'
             ant_number = int(ant_number)
             pattern = pd.read_csv(pattern)
             Station_1 = load_object_from_disk(name)
             a1 = antenna.Antenna(ant_number, 'test', 0, 0)
             a1.assign_pattern(pattern)
             Station_1.add_antenna(a1)
-            save_object_to_disk(Station_1, f'/home/app/{Station_1.name}.pkl')
+            save_object_to_disk(Station_1, f'{user_working_dir.get()}{Station_1.name}.pkl')
             logger.info(f"A new pattern was assigned to {Station_1.name}")
         except Exception as err:
             logger.error(err)
@@ -184,9 +152,9 @@ def server(input, output, session):
                              select_ant_det_1_int, select_ant_det_2_int, select_ant_det_3_int):
         try:
             logger.info("Loading Stations")
-            Station_1 = load_object_from_disk(f'{select_stat_det_1_str}.pkl')
-            Station_2 = load_object_from_disk(f'{select_stat_det_2_str}.pkl')
-            Station_3 = load_object_from_disk(f'{select_stat_det_3_str}.pkl')
+            Station_1 = load_object_from_disk(user_working_dir.get() + f'{select_stat_det_1_str}.pkl')
+            Station_2 = load_object_from_disk(user_working_dir.get() + f'{select_stat_det_2_str}.pkl')
+            Station_3 = load_object_from_disk(user_working_dir.get() + f'{select_stat_det_3_str}.pkl')
             logger.info("Stations Loaded Successfully")
 
             det1 = Detection(Station_1, float(stat_1_strength_float), int(select_ant_det_1_int) - 1)
@@ -201,17 +169,27 @@ def server(input, output, session):
         except Exception as err:
             logger.error(err)
 
-# FastAPI integration
-@app.get("/")
-async def main(request: Request, response: Response):
-    session_id = get_session_id(request, response)
-    # Shiny App
-    shiny_app = App(app_ui, server)
-    shiny_app.server.session['session_id'] = session_id
-    return {"message": "Session ID passed to Shiny", "session_id": session_id}
 
-# Start cleanup in a separate thread
-cleanup_thread = threading.Thread(target=schedule_cleanup, daemon=True)
-cleanup_thread.start()
+    @session.on_ended
+    def cleanup():
+        for dir_path in "/tmp/users/":
+            # Ensure we only delete directories in the expected range
+            if "/tmp/users/" in dir_path and "10000" <= dir_path.split('/')[-2] < "11000":
+                try:
+                    shutil.rmtree(dir_path)
+                    print(f"Deleted directory: {dir_path}")
+                except OSError as e:
+                    print(f"Error deleting directory {dir_path}: {e}")
 
+#helper function
+def save_object_to_disk(obj, file_path):
+    """Save an object to disk using pickle."""
+    with open(file_path, 'wb') as file:
+        pickle.dump(obj, file)
 
+def load_object_from_disk(file_path):
+    """Load an object from disk using pickle."""
+    with open(file_path, 'rb') as file:
+        return pickle.load(file)
+
+app = App(app_ui,server)

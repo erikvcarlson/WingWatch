@@ -21,6 +21,7 @@ RUN chown app:app -R /home/app
 
 USER app
 
+RUN mkdir /tmp/users/
 
 COPY basic-app/requirements.txt .
 COPY WingWatch /home/app/WingWatch
