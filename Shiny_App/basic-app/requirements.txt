@@ -11,3 +11,4 @@ ipyleaflet
 streamlit
 shiny
 shinywidgets
+manifold3d
