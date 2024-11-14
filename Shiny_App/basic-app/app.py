@@ -205,20 +205,32 @@ def server(input,output,session):
             intersections, hull_of_intersections = tri.overlap_of_three_radiation_patterns(data_to_send_through)
             logger.info("Hull of Intersections Generated")
 
-            V = ss.ConvexHull(intersections)
-            radius = sph.find_radius_from_vol(V)
+            V = ss.ConvexHull(hull_of_intersections.points)
+            radius = sph.find_radius_from_vol(V.volume)
+
+            logger.info("Radius of Volume Approximated")
 
             cx = np.mean(hull_of_intersections.points[hull_of_intersections.vertices,0])
             cy = np.mean(hull_of_intersections.points[hull_of_intersections.vertices,1])
             cz = np.mean(hull_of_intersections.points[hull_of_intersections.vertices,2])
 
+            logger.info("Center of Hull Found")
+
             Detection_pos = translation.convert_back_to_lla([cx,cy,cz],Station_1.lat,Station_1.long,Station_1.alt)
 
+            logger.info("Ready to Draw the Circle")
 
             circle = Circle()
-            circle.location(Detection_pos[0],Detection_pos[1])
-            circle.radius(radius)
+            logger.info('Circle Initialized')
+            circle.location = (Detection_pos[0],Detection_pos[1])
+            logger.info("Position Assigned")
+            
+            circle.radius = int(radius)
+
+            logger.info("Circle Given Radius")
+
             circle.color = "green"
+            circle.fill_color = "green"
 
             m = map.widget
             m.add(circle)
