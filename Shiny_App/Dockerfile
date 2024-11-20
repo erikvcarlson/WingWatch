@@ -1,5 +1,10 @@
 FROM ubuntu:22.04
 
+#You will needto manually define the platform command when using a ARM Mac.The build command is: 
+    
+#docker build --platform linux/amd64 --pull --rm -f "Shiny_App/Dockerfile" -t wingwatch:latest "Shiny_App"
+
+
 #FROM python:3.9
 
 # Install dependencies
