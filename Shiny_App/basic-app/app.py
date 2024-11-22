@@ -1,6 +1,6 @@
 from ipyleaflet import Map, basemaps, Marker, Circle
 from ipywidgets import Layout  
-from shiny import App, reactive, ui
+from shiny import App, reactive, ui,render
 from shinywidgets import output_widget, render_widget  
 from WingWatch.Equipment import station, antenna
 from WingWatch.Intersections import tri
@@ -17,10 +17,13 @@ import numpy as np
 import pickle
 import shutil
 import scipy.spatial as ss
+import base64
 
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='/home/app/example.log', encoding='utf-8', level=logging.DEBUG)
+js_file = '/home/app/js/app.js'
+js_file_save = '/home/app/js/app_save.js'
 
 
 # Shiny app UI
@@ -63,6 +66,7 @@ app_ui = ui.page_sidebar(
         ui.card("Map Properties and Layer Control"),
         ui.card("Tesserlation Visualizer")
     ),
+    ui.output_ui("handle_click"),
 )
 
 # Shiny app server logic
@@ -148,13 +152,18 @@ def server(input,output,session):
     #@ui.bind_task_button()
     #@reactive.effect
     #@reactive.event(input.generate_station)
-    @reactive.effect
+    # @render.ui
+    # @reactive.effect
+    # @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
+    @render.ui
     @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
     def handle_click():
         logger.info('The Station Generation Button was Clicked.')
         logger.info(f'The working directory for station generation is: {user_working_dir.get()}')
 
         write_station_out(input.station_name(), float(input.lat_val_stat()), float(input.long_val_stat()),user_working_dir.get())
+        
+
         time.sleep(1)
         m = map.widget
         point = Marker(location=(input.lat_val_stat(), input.long_val_stat()), draggable=False)     
@@ -165,6 +174,14 @@ def server(input,output,session):
         ui.update_select("select_stat_det_1", choices=file_list_no_ext)
         ui.update_select("select_stat_det_2", choices=file_list_no_ext)
         ui.update_select("select_stat_det_3", choices=file_list_no_ext)
+
+        return ui.TagList(
+            ui.HTML("<p>Hello <strong>world</strong>!</p>"),
+            ui.HTML("<p id='demo'></p>"),
+            #ui.include_js(js_file),
+            ui.include_js('/home/app/save_data.js'),
+
+        )
 
     @reactive.effect
     @reactive.event(input.Assign_Pattern, ignore_none=False,ignore_init= True)
@@ -241,6 +258,18 @@ def server(input,output,session):
             logger.error(err)
 
 
+    # @render.ui
+    # @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
+    # def moreControls():
+    #     return ui.TagList(
+    #         ui.HTML("<p>Hello <strong>world</strong>!</p>"),
+    #         ui.HTML("<p id='demo'></p>"),
+    #         ui.include_js(js_file),
+    #         ui.include_js(js_file_save),
+
+    #     )
+
+
     @session.on_ended
     def cleanup():
         for dir_path in "/tmp/users/":
@@ -252,11 +281,25 @@ def server(input,output,session):
                 except OSError as e:
                     print(f"Error deleting directory {dir_path}: {e}")
 
+
+
 #helper function
 def save_object_to_disk(obj, file_path):
     """Save an object to disk using pickle."""
     with open(file_path, 'wb') as file:
         pickle.dump(obj, file)
+
+def save_object_to_localstorage(obj):
+    """Save an object to disk using pickle."""
+    message_bytes = pickle.dumps(obj)
+    base64_bytes = base64.b64encode(message_bytes)
+    txt = base64_bytes.decode('ascii')
+    return txt
+
+def write_js_file(StationName,txt):
+    with open('/home/app/save_data.js', "w") as file:
+        file.write(f'localStorage.setItem("{StationName}", "{txt}"); \n console.log("Success");')
+ 
 
 def load_object_from_disk(file_path):
     """Load an object from disk using pickle."""
@@ -268,13 +311,24 @@ def write_station_out(stationName, latValStat, longValStat,working_dir):
         logger.info(f'Station Parameters are;Station Name  = {stationName}, Lat = {latValStat}, Long = {longValStat}')
         Station_1 = station.Station(stationName, latValStat, longValStat)
         logger.info("Station Generated.")
+        txt = save_object_to_localstorage(Station_1)
+        write_js_file('Hello',txt)
+        logger.info("Successfully Wrote Out JS script")
         try:
             logger.info(f'Current Working Directory: {working_dir}')
         except Exception as err:
             logger.error(err)
 
         filename = working_dir + f'{Station_1.name}.pkl'
+        #filename = f'{Station_1.name}.pkl'
         save_object_to_disk(Station_1, filename)
+
+# Serialize an object into a plain text
+def obj_to_txt(obj):
+    message_bytes = pickle.dumps(obj)
+    base64_bytes = base64.b64encode(message_bytes)
+    txt = base64_bytes.decode('ascii')
+    return txt
 
 
 app = App(app_ui,server)
