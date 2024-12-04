@@ -62,6 +62,45 @@ def intersect_of_two_triangles(edges_T1,edges_T2):
 
     return intersections
 
+def generate_box_surface_points(x_min, x_max, y_min, y_max, z_min, z_max, step):
+    """
+    Generate points on the surface of a box. Used to prevent the bird from being in the ground
+
+    Parameters:
+        x_min, x_max: Range for x-axis.
+        y_min, y_max: Range for y-axis.
+        z_min, z_max: Range for z-axis.
+        step: Spacing between points.
+
+    Returns:
+        List of tuples representing points on the box surface.
+    """
+    points = []
+
+    # Generate ranges
+    x_range = np.arange(x_min, x_max + step, step)
+    y_range = np.arange(y_min, y_max + step, step)
+    z_range = np.arange(z_min, z_max + step, step)
+
+    # Bottom and top faces (z_min and z_max)
+    for x in x_range:
+        for y in y_range:
+            points.append((x, y, z_min))
+            points.append((x, y, z_max))
+
+    # Side faces (x_min and x_max)
+    for y in y_range:
+        for z in z_range:
+            points.append((x_min, y, z))
+            points.append((x_max, y, z))
+
+    # Front and back faces (y_min and y_max)
+    for x in x_range:
+        for z in z_range:
+            points.append((x, y_min, z))
+            points.append((x, y_max, z))
+
+    return points
 
 def overlap_of_three_radiation_patterns(list_of_detections):
     '''
@@ -78,11 +117,24 @@ def overlap_of_three_radiation_patterns(list_of_detections):
     station_2_boundary = station_shells[1]
     station_3_boundary = station_shells[2]
 
+
+    # Parameters of the box
+    x_min, x_max = -30000, 30000 #this needs to be sufficiently large as to not accidently effect the result of the translational accuracy. 
+    y_min, y_max = -30000, 30000
+    z_min, z_max = 0, 30000
+    step = 5000  # Change this value for finer or coarser granularity
+
+
+    #the bird cannot travel through the ground
+    above_ground_boundary = generate_box_surface_points(x_min, x_max, y_min, y_max, z_min, z_max, step)
+
+
     mesh = trimesh.convex.convex_hull(station_1_boundary)
     mesh_1 = trimesh.convex.convex_hull(station_2_boundary)
     mesh_2 = trimesh.convex.convex_hull(station_3_boundary)
+    mesh_above_ground = trimesh.convex.convex_hull(above_ground_boundary)
 
-    mesh4 = trimesh.boolean.intersection([mesh,mesh_1,mesh_2])
+    mesh4 = trimesh.boolean.intersection([mesh,mesh_1,mesh_2,mesh_above_ground])
 
     intersections = mesh4.vertices
     hull_of_intersections = ss.ConvexHull(intersections)
