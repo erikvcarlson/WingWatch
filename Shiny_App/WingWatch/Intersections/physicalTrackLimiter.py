@@ -1,10 +1,11 @@
 from WingWatch.Intersections.detection import Detection
 from WingWatch.Intersections import tri
 import trimesh
-import pycork
 from WingWatch.Tools import spheres
 import numpy as np 
 import scipy.spatial as ss
+from scipy.spatial.distance import cdist
+
 # I have a series of detections. From detection A to B the bird can only travel y distance. From detection B to C the bird can only travel y distance from B and 2y from A. I am guessing the pattern looks like this:
 
 # A: x
@@ -72,13 +73,29 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
     mesh1 = trimesh.convex.convex_hull(expanded_region)
     mesh2 = trimesh.convex.convex_hull(region_static)
 
+
+
+
+    # Parameters of the box
+    x_min, x_max = -30000, 30000 #this needs to be sufficiently large as to not accidently effect the result of the translational accuracy. 
+    y_min, y_max = -30000, 30000
+    z_min, z_max = 0, 30000
+    step = 5000  # Change this value for finer or coarser granularity
+
+    above_ground_boundary = tri.generate_box_surface_points(x_min, x_max, y_min, y_max, z_min, z_max, step)
+
+    mesh_above_ground = trimesh.convex.convex_hull(above_ground_boundary)
+    
     #vertsA = mesh1.vertices
     #trisA = mesh1.faces
 
     #vertsB = mesh2.vertices
     #trisB = mesh2.faces
     #this is a temp fix to fix a case where the new regions do not overlap. If they do not overlap, I am just returning the larger region
-    mesh3 = trimesh.boolean.intersection([mesh1,mesh2])
+    
+    mesh3 = trimesh.boolean.intersection([mesh1,mesh2,mesh_above_ground])
+    
+    
     intersections = mesh3.vertices
     hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
     #intersections = expanded_region
@@ -89,6 +106,7 @@ def check_constraints(region_1,region_2,max_speed,time_stamp_difference):
 
 
 def check_constraints_two_region(region_1,region_2,region_3,max_speed,time_stamp_difference):
+
     #region_1 is the oldest detection
     #region_2 is the old detection
     #region 3 in the new detection 
@@ -115,3 +133,32 @@ def check_constraints_two_region(region_1,region_2,region_3,max_speed,time_stamp
     intersections = mesh3.vertices
     hull_of_intersections = ss.ConvexHull(intersections,qhull_options='Q12')
     return intersections,hull_of_intersections
+
+
+def weighted_center_approach(region_1,loc_ant1,loc_ant2,loc_ant3):
+
+
+    # loc_ant1 presumably a list
+    # det1_ss detection signal strengh 
+    # det2_ss detection signal strengh
+
+    
+    rss_combined = np.zeros(len(region_1))
+    for i, point in enumerate(region_1.points):
+        distances1 = cdist([point], loc_ant1)[0]
+        distances2 = cdist([point], loc_ant2)[0]
+        distances3 = cdist([point], loc_ant3)[0]
+        
+        # Weight inversely proportional to distance
+        weights1 = det1_ss / (distances1 + 1e-6)
+        weights2 = det2_ss / (distances2 + 1e-6)
+        weights3 = det3_ss / (distances3 + 1e-6)
+        
+        # Combined RSS weight
+        rss_combined[i] = np.sum(weights1) + np.sum(weights2) + np.sum(weights3)
+
+    # Find the point with maximum likelihood
+    max_index = np.argmax(rss_combined)
+    most_likely_point = region_1[max_index]
+
+    return 
