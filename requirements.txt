@@ -11,3 +11,5 @@ ipyleaflet
 shiny
 shinywidgets
 manifold3d
+scipy 
+scikit-learn

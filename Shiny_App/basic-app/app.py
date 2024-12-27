@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(filename='/home/app/example.log', encoding='utf-8', level=logging.DEBUG)
 js_file = '/home/app/js/app.js'
 js_file_save = '/home/app/js/app_save.js'
-
+js_file_init_db = '/home/app/js/initdB.js'
 
 # Shiny app UI
 app_ui = ui.page_sidebar(
@@ -74,8 +74,10 @@ def server(input,output,session):
     
     user_working_dir = reactive.value()
 
+    @render.ui
     @reactive.effect
     def startup_modal():
+        ui.include_js(js_file_init_db)
         # Define the modal with a dismiss button
         logger.info('Showed Modal Message')
         ui.modal_show(
@@ -178,8 +180,8 @@ def server(input,output,session):
         return ui.TagList(
             ui.HTML("<p>Hello <strong>world</strong>!</p>"),
             ui.HTML("<p id='demo'></p>"),
-            #ui.include_js(js_file),
-            ui.include_js('/home/app/save_data.js'),
+            ui.include_js(js_file),
+            #ui.include_js('/home/app/save_data.js'),
 
         )
 
