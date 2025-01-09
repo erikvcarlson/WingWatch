@@ -66,6 +66,7 @@ app_ui = ui.page_sidebar(
         ui.card("Map Properties and Layer Control"),
         ui.card("Tesserlation Visualizer")
     ),
+    ui.include_js('/home/app/js/initdB.js'),
     ui.output_ui("handle_click"),
 )
 
@@ -77,7 +78,6 @@ def server(input,output,session):
     @render.ui
     @reactive.effect
     def startup_modal():
-        ui.include_js(js_file_init_db)
         # Define the modal with a dismiss button
         logger.info('Showed Modal Message')
         ui.modal_show(
@@ -89,7 +89,8 @@ def server(input,output,session):
                 footer=None
             )
         )
-
+        
+    @render.ui
     @reactive.effect
     @reactive.event(input.close_modal)
     def startup_fn():
@@ -111,6 +112,15 @@ def server(input,output,session):
         logger.info('Directory Function Ran on Start-up')
         logger.info('Start-up Script Ran')
         logger.info(f'The current user directory is: {user_working_dir.get()}')
+        
+        return ui.TagList(
+            ui.HTML("<p>Hello <strong>Jeb</strong>!</p>"),
+            ui.HTML("<p id='demo'></p>"),
+            # ui.include_js('/home/app/js/initdB.js'),
+            #ui.include_js('/home/app/save_data.js'),
+        )
+
+
 
 
     # Function to handle user button click (user_select)
@@ -180,7 +190,7 @@ def server(input,output,session):
         return ui.TagList(
             ui.HTML("<p>Hello <strong>world</strong>!</p>"),
             ui.HTML("<p id='demo'></p>"),
-            ui.include_js(js_file),
+            ui.include_js('/home/app/js/writetoDB.js'),
             #ui.include_js('/home/app/save_data.js'),
 
         )
@@ -291,12 +301,13 @@ def save_object_to_disk(obj, file_path):
     with open(file_path, 'wb') as file:
         pickle.dump(obj, file)
 
-def save_object_to_localstorage(obj):
+def save_object_to_indexdb(obj):
     """Save an object to disk using pickle."""
     message_bytes = pickle.dumps(obj)
     base64_bytes = base64.b64encode(message_bytes)
     txt = base64_bytes.decode('ascii')
     return txt
+
 
 def write_js_file(StationName,txt):
     with open('/home/app/save_data.js', "w") as file:
@@ -313,7 +324,7 @@ def write_station_out(stationName, latValStat, longValStat,working_dir):
         logger.info(f'Station Parameters are;Station Name  = {stationName}, Lat = {latValStat}, Long = {longValStat}')
         Station_1 = station.Station(stationName, latValStat, longValStat)
         logger.info("Station Generated.")
-        txt = save_object_to_localstorage(Station_1)
+        txt = save_object_to_indexdb(Station_1)
         write_js_file('Hello',txt)
         logger.info("Successfully Wrote Out JS script")
         try:

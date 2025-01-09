@@ -1,38 +1,9 @@
-function initializeIndexedDB(dbName, version, storeName) {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, version);
+let db; 
+const request = window.indexedDB.open("StationInformation", 1); // Name, Version Number
 
-        request.onupgradeneeded = function (event) {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(storeName)) {
-                db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
-                console.log(`Object store '${storeName}' created.`);
-            }
-        };
-
-        request.onsuccess = function (event) {
-            const db = event.target.result;
-            console.log(`IndexedDB '${dbName}' initialized successfully.`);
-            resolve(db);
-        };
-
-        request.onerror = function (event) {
-            console.error("Error initializing IndexedDB:", event.target.errorCode);
-            reject(event.target.errorCode);
-        };
-    });
-}
-
-// Usage
-const dbName = "MyWebAppDB";
-const version = 1;
-const storeName = "MyStore";
-
-initializeIndexedDB(dbName, version, storeName)
-    .then((db) => {
-        console.log("Database is ready:", db);
-        // Perform further operations with the database
-    })
-    .catch((error) => {
-        console.error("Failed to initialize IndexedDB:", error);
-    });
+request.onerror = (event) => {
+    console.error("Why didn't you allow my web app to use IndexedDB?!");
+  };
+  request.onsuccess = (event) => {
+    db = event.target.result;
+  };
