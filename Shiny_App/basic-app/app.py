@@ -18,24 +18,16 @@ import pickle
 import shutil
 import scipy.spatial as ss
 import base64
+import json 
 
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='/home/app/example.log', encoding='utf-8', level=logging.DEBUG)
-js_file = '/home/app/js/app.js'
-js_file_save = '/home/app/js/app_save.js'
-js_file_init_db = '/home/app/js/initdB.js'
 
 # Shiny app UI
-app_ui = ui.page_sidebar(
-    ui.sidebar(
-        ui.input_numeric("user", "User Number", 1000, min=1000, max=9999),
-        ui.input_task_button("user_select", "Go!"),      
-        open="closed", 
-        bg="#f8f8f8",    
-        ),
+app_ui = ui.page_fluid(
     ui.layout_columns(
-            ui.card(
+        ui.card(
             ui.card_header("Station Creation Terminal"),
             ui.input_text("station_name", "Name of Station", "Station Name"),
             ui.input_numeric("lat_val_stat", "Latitude", 41, min=-90, max=90),
@@ -60,95 +52,179 @@ app_ui = ui.page_sidebar(
             ui.input_numeric("stat_3_strength", "Strength of Station 3 Detection", 0),
             ui.input_task_button("Detect", "Go!")
         ),
+
     ),
     ui.layout_columns(
         ui.card("Data Input"),
         ui.card("Map Properties and Layer Control"),
         ui.card("Tesserlation Visualizer")
     ),
-    ui.include_js('/home/app/js/initdB.js'),
     ui.output_ui("handle_click"),
-)
+    ui.HTML("""
+    <script>
+    // Initialize IndexedDB
+    const dbName = "RFShinyApp";
+    const storeName = "StationInformation";
 
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName, { keyPath: "key" });
+                }
+            };
+            request.onsuccess = (event) => resolve(event.target.result);
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function saveToDB(key, value) {
+        const db = await initDB();
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.put({ key, value });
+        return tx.complete;
+    }
+
+    async function loadFromDB(key) {
+        const db = await initDB();
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        return new Promise((resolve, reject) => {
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result ? request.result.value : null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function listAllKeys() {
+        const db = await initDB();
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        return new Promise((resolve, reject) => {
+            const keys = [];
+            const request = store.openCursor();
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    keys.push(cursor.key);
+                    cursor.continue();
+                } else {
+                    resolve(keys); // Resolve when the cursor is done
+                }
+            };
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+
+    // Listen for Shiny messages
+    Shiny.addCustomMessageHandler("save_to_indexeddb", async (message) => {
+        await saveToDB(message.key, message.value);
+        Shiny.setInputValue("save_status", "success");
+    });
+
+    Shiny.addCustomMessageHandler("load_from_indexeddb", async (message) => {
+        const value = await loadFromDB(message.key);
+        Shiny.setInputValue("loaded_value", value);
+    });
+
+    Shiny.addCustomMessageHandler("list_keys", async (message) => {
+        const keys = await listAllKeys();
+        Shiny.setInputValue("all_keys", keys); // Send the list of keys to Shiny
+    });
+
+    </script>
+    """),
+)
 # Shiny app server logic
 def server(input,output,session):
     
-    user_working_dir = reactive.value()
+    #user_working_dir = reactive.value()
 
-    @render.ui
-    @reactive.effect
-    def startup_modal():
-        # Define the modal with a dismiss button
-        logger.info('Showed Modal Message')
-        ui.modal_show(
-            ui.modal(
-                ui.input_action_button("close_modal","Close"),
-                ui.p('You are using a random user. If you would like to use a known user, use the user selection tool on the right.'),
-                title="Welcome!",
-                easy_close=True,
-                footer=None
-            )
-        )
+    # @render.ui
+    # @reactive.effect
+    # def startup_modal():
+    #     # Define the modal with a dismiss button
+    #     logger.info('Showed Modal Message')
+    #     ui.modal_show(
+    #         ui.modal(
+    #             ui.input_action_button("close_modal","Close"),
+    #             ui.p('You are using a random user. If you would like to use a known user, use the user selection tool on the right.'),
+    #             title="Welcome!",
+    #             easy_close=True,
+    #             footer=None
+    #         )
+    #     )
         
-    @render.ui
     @reactive.effect
-    @reactive.event(input.close_modal)
-    def startup_fn():
-        ui.modal_remove()
+    #@reactive.event(input.close_modal)
+    async def startup_fn():
+        #ui.modal_remove()
+        await session.send_custom_message("list_keys", {})
+        logger.info("Triggered list_keys message handler in JavaScript")
+
         # Code to execute on startup
-        user = np.random.randint(10000, 11000)
+        #user = np.random.randint(10000, 11000)
         
-        new_dir = f'/tmp/users/{user}/'
-        user_working_dir.set(new_dir)
+        #new_dir = f'/tmp/users/{user}/'
+        #user_working_dir.set(new_dir)
         
         # Create directory if it doesn't exist
-        if not os.path.exists(user_working_dir.get()):
-            os.makedirs(user_working_dir.get())
-            
+        #if not os.path.exists(user_working_dir.get()):
+        #    os.makedirs(user_working_dir.get())
+
         # Reactive output to provide choices for input_select based on user_working_dir
-        stations_long = glob.glob(user_working_dir.get() + '*.pkl')
-        stations = [os.path.splitext(os.path.basename(file))[0] for file in stations_long]
+        #stations_long = glob.glob(user_working_dir.get() + '*.pkl')
+        #stations = [os.path.splitext(os.path.basename(file))[0] for file in stations_long]
         time.sleep(1)
-        logger.info('Directory Function Ran on Start-up')
+        #logger.info('Directory Function Ran on Start-up')
         logger.info('Start-up Script Ran')
-        logger.info(f'The current user directory is: {user_working_dir.get()}')
+        #logger.info(f'The current user directory is: {user_working_dir.get()}')
         
-        return ui.TagList(
-            ui.HTML("<p>Hello <strong>Jeb</strong>!</p>"),
-            ui.HTML("<p id='demo'></p>"),
-            # ui.include_js('/home/app/js/initdB.js'),
-            #ui.include_js('/home/app/save_data.js'),
-        )
 
 
 
+    @reactive.Effect
+    @reactive.event(input.all_keys)
+    def handle_list_keys():
+        keys = input.all_keys()  # Retrieve the list of keys from IndexedDB
+        logger.info(f"Retrieved keys from IndexedDB: {keys}")
+        ui.update_select("select_stat", choices=keys)
+        ui.update_select("select_stat_det_1", choices=keys)
+        ui.update_select("select_stat_det_2", choices=keys)
+        ui.update_select("select_stat_det_3", choices=keys)
 
-    # Function to handle user button click (user_select)
-    @reactive.effect
-    @reactive.event(input.user_select)  # React to button click
-    def update_user_directory():
-        # Get user input
-        user = input.user()
+    
+    
+    # # Function to handle user button click (user_select)
+    # @reactive.effect
+    # @reactive.event(input.user_select)  # React to button click
+    # def update_user_directory():
+    #     # Get user input
+    #     user = input.user()
        
-        new_dir = f'/tmp/users/{user}/'
-        user_working_dir.set(new_dir)
+    #     new_dir = f'/tmp/users/{user}/'
+    #     user_working_dir.set(new_dir)
         
-        # Create directory if it doesn't exist
-        if not os.path.exists(user_working_dir.get()):
-            os.makedirs(user_working_dir.get())
+    #     # Create directory if it doesn't exist
+    #     if not os.path.exists(user_working_dir.get()):
+    #         os.makedirs(user_working_dir.get())
             
-        # Reactive output to provide choices for input_select based on user_working_dir
+    #     # Reactive output to provide choices for input_select based on user_working_dir
 
-        file_list =  glob.glob(user_working_dir.get() +'*.pkl')
-        file_list_no_ext = [os.path.splitext(os.path.basename(file))[0] for file in file_list]
-        ui.update_select("select_stat", choices=file_list_no_ext)
-        ui.update_select("select_stat_det_1", choices=file_list_no_ext)
-        ui.update_select("select_stat_det_2", choices=file_list_no_ext)
-        ui.update_select("select_stat_det_3", choices=file_list_no_ext)
+    #     file_list =  glob.glob(user_working_dir.get() +'*.pkl')
+    #     file_list_no_ext = [os.path.splitext(os.path.basename(file))[0] for file in file_list]
+    #     # ui.update_select("select_stat", choices=file_list_no_ext)
+    #     # ui.update_select("select_stat_det_1", choices=file_list_no_ext)
+    #     # ui.update_select("select_stat_det_2", choices=file_list_no_ext)
+    #     # ui.update_select("select_stat_det_3", choices=file_list_no_ext)
 
 
-        time.sleep(1)
-        logger.info('Directory Function Ran')
+    #     time.sleep(1)
+    #     logger.info('Directory Function Ran')
 
     @render_widget
     def map():
@@ -161,40 +237,35 @@ def server(input,output,session):
 
         return m
 
-    #@ui.bind_task_button()
-    #@reactive.effect
-    #@reactive.event(input.generate_station)
-    # @render.ui
-    # @reactive.effect
-    # @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
     @render.ui
     @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
-    def handle_click():
+    async def handle_click():
         logger.info('The Station Generation Button was Clicked.')
-        logger.info(f'The working directory for station generation is: {user_working_dir.get()}')
-
-        write_station_out(input.station_name(), float(input.lat_val_stat()), float(input.long_val_stat()),user_working_dir.get())
+        #logger.info(f'The working directory for station generation is: {user_working_dir.get()}')
         
+        
+        logger.info('Intializing Station Function')
+        logger.info(f'Station Parameters are;Station Name  = {input.station_name()}, Lat = {input.lat_val_stat()}, Long = {input.long_val_stat()}')
+        Station_1 = station.Station(input.station_name(), float(input.lat_val_stat()), float(input.long_val_stat()))
+        logger.info("Station Generated.")
+        
+        jsonstr1 = json.dumps(Station_1.__dict__) 
+        
+        logger.info("Station converted to JSON.")
 
+        key = input.station_name()
+        value = jsonstr1
+
+        await save_to_indexeddb(key,value)
+        await session.send_custom_message("list_keys", {})
+
+        logger.info("Station Saved")
         time.sleep(1)
         m = map.widget
         point = Marker(location=(input.lat_val_stat(), input.long_val_stat()), draggable=False)     
         m.add_layer(point)  
-        file_list =  glob.glob(user_working_dir.get() +'*.pkl')
-        file_list_no_ext = [os.path.splitext(os.path.basename(file))[0] for file in file_list]
-        ui.update_select("select_stat", choices=file_list_no_ext)
-        ui.update_select("select_stat_det_1", choices=file_list_no_ext)
-        ui.update_select("select_stat_det_2", choices=file_list_no_ext)
-        ui.update_select("select_stat_det_3", choices=file_list_no_ext)
 
-        return ui.TagList(
-            ui.HTML("<p>Hello <strong>world</strong>!</p>"),
-            ui.HTML("<p id='demo'></p>"),
-            ui.include_js('/home/app/js/writetoDB.js'),
-            #ui.include_js('/home/app/save_data.js'),
-
-        )
-
+        
     @reactive.effect
     @reactive.event(input.Assign_Pattern, ignore_none=False,ignore_init= True)
     def handle_click_assign_pattern():
@@ -269,17 +340,13 @@ def server(input,output,session):
         except Exception as err:
             logger.error(err)
 
+    async def save_to_indexeddb(key,value):
+        await session.send_custom_message("save_to_indexeddb", {"key": key, "value": value})
 
-    # @render.ui
-    # @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
-    # def moreControls():
-    #     return ui.TagList(
-    #         ui.HTML("<p>Hello <strong>world</strong>!</p>"),
-    #         ui.HTML("<p id='demo'></p>"),
-    #         ui.include_js(js_file),
-    #         ui.include_js(js_file_save),
+    async def load_from_indexeddb(key):
+        await session.send_custom_message("load_from_indexeddb", {"key": key})
 
-    #     )
+
 
 
     @session.on_ended
@@ -301,47 +368,24 @@ def save_object_to_disk(obj, file_path):
     with open(file_path, 'wb') as file:
         pickle.dump(obj, file)
 
-def save_object_to_indexdb(obj):
-    """Save an object to disk using pickle."""
-    message_bytes = pickle.dumps(obj)
-    base64_bytes = base64.b64encode(message_bytes)
-    txt = base64_bytes.decode('ascii')
-    return txt
-
-
-def write_js_file(StationName,txt):
-    with open('/home/app/save_data.js', "w") as file:
-        file.write(f'localStorage.setItem("{StationName}", "{txt}"); \n console.log("Success");')
- 
+# def save_object_to_indexdb(obj):
+#     """Save an object to disk using pickle."""
+#     message_bytes = pickle.dumps(obj)
+#     base64_bytes = base64.b64encode(message_bytes)
+#     txt = base64_bytes.decode('ascii')
+#     return txt
 
 def load_object_from_disk(file_path):
     """Load an object from disk using pickle."""
     with open(file_path, 'rb') as file:
         return pickle.load(file)
 
-def write_station_out(stationName, latValStat, longValStat,working_dir):
-        logger.info('Intializing Station Function')
-        logger.info(f'Station Parameters are;Station Name  = {stationName}, Lat = {latValStat}, Long = {longValStat}')
-        Station_1 = station.Station(stationName, latValStat, longValStat)
-        logger.info("Station Generated.")
-        txt = save_object_to_indexdb(Station_1)
-        write_js_file('Hello',txt)
-        logger.info("Successfully Wrote Out JS script")
-        try:
-            logger.info(f'Current Working Directory: {working_dir}')
-        except Exception as err:
-            logger.error(err)
-
-        filename = working_dir + f'{Station_1.name}.pkl'
-        #filename = f'{Station_1.name}.pkl'
-        save_object_to_disk(Station_1, filename)
-
-# Serialize an object into a plain text
-def obj_to_txt(obj):
-    message_bytes = pickle.dumps(obj)
-    base64_bytes = base64.b64encode(message_bytes)
-    txt = base64_bytes.decode('ascii')
-    return txt
+# # Serialize an object into a plain text
+# def obj_to_txt(obj):
+#     message_bytes = pickle.dumps(obj)
+#     base64_bytes = base64.b64encode(message_bytes)
+#     txt = base64_bytes.decode('ascii')
+#     return txt 
 
 
 app = App(app_ui,server)
