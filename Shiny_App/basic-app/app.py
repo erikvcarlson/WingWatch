@@ -1,5 +1,7 @@
-from ipyleaflet import Map, basemaps, Marker, Circle
-from ipywidgets import Layout  
+#from ipyleaflet import Map, basemaps, Marker, Circle,MarkerCluster
+#from ipywidgets import Layout  
+import plotly.express as px
+
 from shiny import App, reactive, ui,render
 from shinywidgets import output_widget, render_widget  
 from WingWatch.Equipment import station, antenna
@@ -19,10 +21,13 @@ import shutil
 import scipy.spatial as ss
 import base64
 import json 
+import asyncio 
+import traceback
 
 # Logging setup
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='/home/app/example.log', encoding='utf-8', level=logging.DEBUG)
+lock = asyncio.Lock()
 
 # Shiny app UI
 app_ui = ui.page_fluid(
@@ -127,8 +132,14 @@ app_ui = ui.page_fluid(
     });
 
     Shiny.addCustomMessageHandler("load_from_indexeddb", async (message) => {
-        const value = await loadFromDB(message.key);
-        Shiny.setInputValue("loaded_value", value);
+        try {
+            const value = await loadFromDB(message.key);
+            console.log("Loaded value from IndexedDB:", value); // Add this log
+            Shiny.setInputValue("loaded_value", value);
+        } catch (error) {
+            console.error("Error loading from IndexedDB:", error); // Add error logging
+            Shiny.setInputValue("loaded_value", null);
+        }
     });
 
     Shiny.addCustomMessageHandler("list_keys", async (message) => {
@@ -141,109 +152,81 @@ app_ui = ui.page_fluid(
 )
 # Shiny app server logic
 def server(input,output,session):
-    
-    #user_working_dir = reactive.value()
+    markers = reactive.value([])
 
-    # @render.ui
-    # @reactive.effect
-    # def startup_modal():
-    #     # Define the modal with a dismiss button
-    #     logger.info('Showed Modal Message')
-    #     ui.modal_show(
-    #         ui.modal(
-    #             ui.input_action_button("close_modal","Close"),
-    #             ui.p('You are using a random user. If you would like to use a known user, use the user selection tool on the right.'),
-    #             title="Welcome!",
-    #             easy_close=True,
-    #             footer=None
-    #         )
-    #     )
-        
     @reactive.effect
-    #@reactive.event(input.close_modal)
     async def startup_fn():
-        #ui.modal_remove()
         await session.send_custom_message("list_keys", {})
         logger.info("Triggered list_keys message handler in JavaScript")
-
-        # Code to execute on startup
-        #user = np.random.randint(10000, 11000)
-        
-        #new_dir = f'/tmp/users/{user}/'
-        #user_working_dir.set(new_dir)
-        
-        # Create directory if it doesn't exist
-        #if not os.path.exists(user_working_dir.get()):
-        #    os.makedirs(user_working_dir.get())
-
-        # Reactive output to provide choices for input_select based on user_working_dir
-        #stations_long = glob.glob(user_working_dir.get() + '*.pkl')
-        #stations = [os.path.splitext(os.path.basename(file))[0] for file in stations_long]
         time.sleep(1)
-        #logger.info('Directory Function Ran on Start-up')
         logger.info('Start-up Script Ran')
-        #logger.info(f'The current user directory is: {user_working_dir.get()}')
-        
-
-
-
-    @reactive.Effect
+      
+    @reactive.effect
     @reactive.event(input.all_keys)
-    def handle_list_keys():
-        keys = input.all_keys()  # Retrieve the list of keys from IndexedDB
-        logger.info(f"Retrieved keys from IndexedDB: {keys}")
-        ui.update_select("select_stat", choices=keys)
-        ui.update_select("select_stat_det_1", choices=keys)
-        ui.update_select("select_stat_det_2", choices=keys)
-        ui.update_select("select_stat_det_3", choices=keys)
+    async def handle_list_keys():
+        try:
+            keys = input.all_keys()  # Retrieve the list of keys from IndexedDB
+            logger.info(f"Retrieved keys from IndexedDB: {keys}")
+            ui.update_select("select_stat", choices=keys)
+            ui.update_select("select_stat_det_1", choices=keys)
+            ui.update_select("select_stat_det_2", choices=keys)
+            ui.update_select("select_stat_det_3", choices=keys)
 
-    
-    
-    # # Function to handle user button click (user_select)
-    # @reactive.effect
-    # @reactive.event(input.user_select)  # React to button click
-    # def update_user_directory():
-    #     # Get user input
-    #     user = input.user()
-       
-    #     new_dir = f'/tmp/users/{user}/'
-    #     user_working_dir.set(new_dir)
-        
-    #     # Create directory if it doesn't exist
-    #     if not os.path.exists(user_working_dir.get()):
-    #         os.makedirs(user_working_dir.get())
+            for key in keys:
+                try:
+                    logger.info(f"The value of markers before is: {markers.get()}")
+                    await load_from_indexeddb(key)
+                    logger.info(f"The value of markers after is: {markers.get()}")
+                except Exception as err:
+                    logger.error(f"Error during key processing: {err}")
             
-    #     # Reactive output to provide choices for input_select based on user_working_dir
+        except Exception as outer_err:
+            logger.error(f"Error in handle_list_keys: {outer_err}")
+        
+        logger.info('handle_list_keys function is complete.')
+    
 
-    #     file_list =  glob.glob(user_working_dir.get() +'*.pkl')
-    #     file_list_no_ext = [os.path.splitext(os.path.basename(file))[0] for file in file_list]
-    #     # ui.update_select("select_stat", choices=file_list_no_ext)
-    #     # ui.update_select("select_stat_det_1", choices=file_list_no_ext)
-    #     # ui.update_select("select_stat_det_2", choices=file_list_no_ext)
-    #     # ui.update_select("select_stat_det_3", choices=file_list_no_ext)
+    # Use reactive context for loaded_value
+    @reactive.effect
+    @reactive.event(input.loaded_value)  # Make loaded_value reactive
+    def process_loaded_value():
+        try:
+            if input.loaded_value() is not None:
+                Station = json.loads(input.loaded_value())
+                logger.info(f"Loaded station data: {Station}")
+                point = [Station['name'],Station['lat'], Station['long']]
+                logger.info('Point for map generated')
+                logger.info('Requesting markers value')
+                current_markers = markers.get()
 
-
-    #     time.sleep(1)
-    #     logger.info('Directory Function Ran')
+                logger.info(f'Markers Value Retrived in process_loaded_value. The value is: {current_markers}')
+                current_markers = current_markers + [point]
+                markers.set(current_markers)  # Add the new marker to the list
+                logger.info(f'Markers Value after in process_loaded_value. The value is: {current_markers}')                               
+            else:
+                logger.warning(f"Value for key is None.")
+        except Exception as err:
+            logger.error(f"Process Loaded Value Error: {err} ")
 
     @render_widget
+    @reactive.event(markers)
     def map():
-        m = Map(
-            basemap=basemaps.Esri.WorldImagery,
-            center=(41, -71),
-            zoom=5,
-            layout=Layout(width='500px', height='500px')
-        )
+        logger.info("Markers have changed, updating the map.")
+        logger.info(f"The value of markers is: {markers.get()}") 
+        df = pd.DataFrame(markers.get(),columns=['Name','Lat','Long'])
 
-        return m
+        fig = px.scatter_map(df, lat="Lat", lon="Long",hover_name='Name', zoom=10)
 
-    @render.ui
+        logger.info(f"Map updated with {len(markers.get())} markers.")
+        return fig
+
+    
+    @reactive.effect
     @reactive.event(input.generate_station, ignore_none=False,ignore_init= True)
     async def handle_click():
+        #time.sleep(1)
         logger.info('The Station Generation Button was Clicked.')
-        #logger.info(f'The working directory for station generation is: {user_working_dir.get()}')
-        
-        
+                 
         logger.info('Intializing Station Function')
         logger.info(f'Station Parameters are;Station Name  = {input.station_name()}, Lat = {input.lat_val_stat()}, Long = {input.long_val_stat()}')
         Station_1 = station.Station(input.station_name(), float(input.lat_val_stat()), float(input.long_val_stat()))
@@ -261,18 +244,14 @@ def server(input,output,session):
 
         logger.info("Station Saved")
         time.sleep(1)
-        m = map.widget
-        point = Marker(location=(input.lat_val_stat(), input.long_val_stat()), draggable=False)     
-        m.add_layer(point)  
 
-        
     @reactive.effect
     @reactive.event(input.Assign_Pattern, ignore_none=False,ignore_init= True)
     def handle_click_assign_pattern():
         try:
             logger.info('Initialized the Assigning Pattern')
             file = input.pattern_entry()[0]["datapath"]
-            name = user_working_dir.get() + f'{input.select_stat()}.pkl'
+            #name = user_working_dir.get() + f'{input.select_stat()}.pkl'
             ant_number = int(input.ant_name())
             pattern = pd.read_csv(file)
             Station_1 = load_object_from_disk(name)
@@ -285,7 +264,6 @@ def server(input,output,session):
             logger.error(err)
 
         time.sleep(1)
-
 
     @reactive.effect
     @reactive.event(input.Detect, ignore_none=False,ignore_init= True)
@@ -346,46 +324,15 @@ def server(input,output,session):
     async def load_from_indexeddb(key):
         await session.send_custom_message("load_from_indexeddb", {"key": key})
 
-
-
-
-    @session.on_ended
-    def cleanup():
-        for dir_path in "/tmp/users/":
-            # Ensure we only delete directories in the expected range
-            if "/tmp/users/" in dir_path and "10000" <= dir_path.split('/')[-2] < "11000":
-                try:
-                    shutil.rmtree(dir_path)
-                    print(f"Deleted directory: {dir_path}")
-                except OSError as e:
-                    print(f"Error deleting directory {dir_path}: {e}")
-
-
-
 #helper function
 def save_object_to_disk(obj, file_path):
     """Save an object to disk using pickle."""
     with open(file_path, 'wb') as file:
         pickle.dump(obj, file)
 
-# def save_object_to_indexdb(obj):
-#     """Save an object to disk using pickle."""
-#     message_bytes = pickle.dumps(obj)
-#     base64_bytes = base64.b64encode(message_bytes)
-#     txt = base64_bytes.decode('ascii')
-#     return txt
-
 def load_object_from_disk(file_path):
     """Load an object from disk using pickle."""
     with open(file_path, 'rb') as file:
         return pickle.load(file)
-
-# # Serialize an object into a plain text
-# def obj_to_txt(obj):
-#     message_bytes = pickle.dumps(obj)
-#     base64_bytes = base64.b64encode(message_bytes)
-#     txt = base64_bytes.decode('ascii')
-#     return txt 
-
 
 app = App(app_ui,server)
