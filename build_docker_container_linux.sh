@@ -1,5 +1,7 @@
 #!/bin/bash
 
+docker rm -f $(docker ps -aq)
+
 pytest test_intro.py
 rsync -avz --ignore-existing --delete WingWatch Shiny_App
 rsync -avz requirements.txt Shiny_App/basic-app

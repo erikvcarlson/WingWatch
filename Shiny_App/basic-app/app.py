@@ -157,10 +157,11 @@ def server(input,output,session):
     @reactive.effect
     async def startup_fn():
         await session.send_custom_message("list_keys", {})
+        asyncio.sleep(0)
         logger.info("Triggered list_keys message handler in JavaScript")
         time.sleep(1)
         logger.info('Start-up Script Ran')
-      
+        
     @reactive.effect
     @reactive.event(input.all_keys)
     async def handle_list_keys():
@@ -171,11 +172,13 @@ def server(input,output,session):
             ui.update_select("select_stat_det_1", choices=keys)
             ui.update_select("select_stat_det_2", choices=keys)
             ui.update_select("select_stat_det_3", choices=keys)
-
             for key in keys:
                 try:
                     logger.info(f"The value of markers before is: {markers.get()}")
                     await load_from_indexeddb(key)
+                    await asyncio.sleep(0)
+                    logger.info(f"The value of markers after is: {input.loaded_value()}")
+                    await asyncio.sleep(0.1)                    
                     logger.info(f"The value of markers after is: {markers.get()}")
                 except Exception as err:
                     logger.error(f"Error during key processing: {err}")
@@ -190,6 +193,7 @@ def server(input,output,session):
     @reactive.effect
     @reactive.event(input.loaded_value)  # Make loaded_value reactive
     def process_loaded_value():
+        logger.info("Entered process_loaded_value")
         try:
             if input.loaded_value() is not None:
                 Station = json.loads(input.loaded_value())
@@ -247,19 +251,51 @@ def server(input,output,session):
 
     @reactive.effect
     @reactive.event(input.Assign_Pattern, ignore_none=False,ignore_init= True)
-    def handle_click_assign_pattern():
+    async def handle_click_assign_pattern():
         try:
             logger.info('Initialized the Assigning Pattern')
             file = input.pattern_entry()[0]["datapath"]
             #name = user_working_dir.get() + f'{input.select_stat()}.pkl'
             ant_number = int(input.ant_name())
             pattern = pd.read_csv(file)
-            Station_1 = load_object_from_disk(name)
+            
+
+            load_from_indexeddb(input.select_stat())
+            
+            
+            Station_JSON = input.loaded_value()
+            
+
+            if not Station_JSON:
+                logger.error(f"No data found for station: {key}")
+                return
+
+            station_data = json.loads(Station_JSON)
+
+            # Recreate the Station object
+            Station_1 = station.Station(name=station_data['name'],lat=station_data['lat'],long=station_data['long'],alt = station_data['alt'],antennas = station_data['antennas']) 
+
+            asyncio.sleep(0.1)
+
             a1 = antenna.Antenna(ant_number, 'test', 0, 0)
             a1.assign_pattern(pattern)
+            
             Station_1.add_antenna(a1)
-            save_object_to_disk(Station_1, f'{user_working_dir.get()}{Station_1.name}.pkl')
+            jsonstr1 = json.dumps(Station_1.__dict__) 
+        
+            logger.info("Station converted to JSON.")
+
+            key = input.station_name()
+            value = jsonstr1
+
+            await save_to_indexeddb(key,value)
+            asyncio.sleep(0.1)
+            await session.send_custom_message("list_keys", {})
+            asyncio.sleep(0.1)
+
+            logger.info("Station Saved")
             logger.info(f"A new pattern was assigned to {Station_1.name}")
+
         except Exception as err:
             logger.error(err)
 
