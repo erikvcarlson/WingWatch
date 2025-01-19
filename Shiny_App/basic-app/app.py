@@ -10,6 +10,7 @@ from WingWatch.Tools import point_check as pc
 from WingWatch.Intersections.detection import Detection
 from WingWatch.Tools import translation
 import WingWatch.Tools.spheres as sph
+from WingWatch.Equipment import antenna as ant
 import pandas as pd
 import os
 import time
@@ -259,13 +260,10 @@ def server(input,output,session):
             ant_number = int(input.ant_name())
             pattern = pd.read_csv(file)
             
-
             load_from_indexeddb(input.select_stat())
-            
             
             Station_JSON = input.loaded_value()
             
-
             if not Station_JSON:
                 logger.error(f"No data found for station: {key}")
                 return
@@ -279,8 +277,15 @@ def server(input,output,session):
 
             a1 = antenna.Antenna(ant_number, 'test', 0, 0)
             a1.assign_pattern(pattern)
+
             
             Station_1.add_antenna(a1)
+
+            #we can't nest objects with indexeddb. To get around this, we will store each antenna as a string 
+            for i in range(len(Station_1.antennas)): 
+                if not isinstance(Station_1.antennas[i], str):
+                    Station_1.antennas[i] = object_to_base64_string(Station_1.antennas[i])
+        
             jsonstr1 = json.dumps(Station_1.__dict__) 
         
             logger.info("Station converted to JSON.")
@@ -360,15 +365,44 @@ def server(input,output,session):
     async def load_from_indexeddb(key):
         await session.send_custom_message("load_from_indexeddb", {"key": key})
 
-#helper function
-def save_object_to_disk(obj, file_path):
-    """Save an object to disk using pickle."""
-    with open(file_path, 'wb') as file:
-        pickle.dump(obj, file)
 
-def load_object_from_disk(file_path):
-    """Load an object from disk using pickle."""
-    with open(file_path, 'rb') as file:
-        return pickle.load(file)
+def object_to_base64_string(obj):
+    """
+    Converts a Python object to a Base64-encoded string via pickle serialization.
+    
+    Parameters:
+        obj: The Python object to serialize.
+    
+    Returns:
+        A Base64-encoded string representation of the object.
+    """
+    # Serialize the object to bytes using pickle
+    pickle_bytes = pickle.dumps(obj)
+    
+    # Encode the bytes to a Base64 string
+    base64_string = base64.b64encode(pickle_bytes).decode('utf-8')
+    
+    return base64_string
+
+
+def base64_string_to_object(base64_string):
+    """
+    Converts a Base64-encoded string back to the original Python object via pickle deserialization.
+    
+    Parameters:
+        base64_string: A Base64-encoded string representation of a serialized object.
+    
+    Returns:
+        The deserialized Python object.
+    """
+    # Decode the Base64 string back to bytes
+    pickle_bytes = base64.b64decode(base64_string)
+    
+    # Deserialize the bytes back to the original object
+    obj = pickle.loads(pickle_bytes)
+    
+    return obj
+
+
 
 app = App(app_ui,server)
