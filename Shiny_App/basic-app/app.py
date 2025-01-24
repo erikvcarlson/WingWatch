@@ -4,6 +4,7 @@ import plotly.express as px
 
 from shiny import App, reactive, ui,render
 from shinywidgets import output_widget, render_widget  
+from shinywidgets import render_plotly
 from WingWatch.Equipment import station, antenna
 from WingWatch.Intersections import tri
 from WingWatch.Tools import point_check as pc
@@ -158,7 +159,7 @@ def server(input,output,session):
     @reactive.effect
     async def startup_fn():
         await session.send_custom_message("list_keys", {})
-        asyncio.sleep(0)
+        asyncio.sleep(0.1)
         logger.info("Triggered list_keys message handler in JavaScript")
         time.sleep(1)
         logger.info('Start-up Script Ran')
@@ -177,7 +178,7 @@ def server(input,output,session):
                 try:
                     logger.info(f"The value of markers before is: {markers.get()}")
                     await load_from_indexeddb(key)
-                    await asyncio.sleep(0)
+                    await asyncio.sleep(0.1)
                     logger.info(f"The value of markers after is: {input.loaded_value()}")
                     await asyncio.sleep(0.1)                    
                     logger.info(f"The value of markers after is: {markers.get()}")
@@ -205,6 +206,7 @@ def server(input,output,session):
                 current_markers = markers.get()
 
                 logger.info(f'Markers Value Retrived in process_loaded_value. The value is: {current_markers}')
+
                 current_markers = current_markers + [point]
                 markers.set(current_markers)  # Add the new marker to the list
                 logger.info(f'Markers Value after in process_loaded_value. The value is: {current_markers}')                               
@@ -213,16 +215,37 @@ def server(input,output,session):
         except Exception as err:
             logger.error(f"Process Loaded Value Error: {err} ")
 
-    @render_widget
+    @render_plotly
     @reactive.event(markers)
     def map():
         logger.info("Markers have changed, updating the map.")
         logger.info(f"The value of markers is: {markers.get()}") 
-        df = pd.DataFrame(markers.get(),columns=['Name','Lat','Long'])
-
-        fig = px.scatter_map(df, lat="Lat", lon="Long",hover_name='Name', zoom=10)
-
-        logger.info(f"Map updated with {len(markers.get())} markers.")
+        if markers.get() != []:
+            # Create a DataFrame with markers data
+            df = pd.DataFrame(markers.get(), columns=['Name', 'Lat', 'Long'])
+            fig = px.scatter_mapbox(
+                df,
+                lat="Lat",
+                lon="Long",
+                hover_name='Name',
+                zoom=10
+            )
+            logger.info(f"Map updated with {len(markers.get())} markers.")
+        else:
+            # Create an empty DataFrame
+            df = pd.DataFrame(columns=['Name', 'Lat', 'Long'])
+            fig = px.scatter_mapbox(
+                df,
+                lat="Lat",
+                lon="Long",
+                hover_name="Name",
+                zoom=9,
+                center={"lat": 41, "lon": -71}
+            )
+            logger.info("Map updated with no markers (default center 41, -71).")
+        
+        # Set Mapbox token
+        fig.update_layout(mapbox_style="open-street-map") 
         return fig
 
     
@@ -310,10 +333,16 @@ def server(input,output,session):
     @reactive.event(input.Detect, ignore_none=False,ignore_init= True)
     def calc_intersect():
         try:
-            logger.info("Loading Stations")
-            Station_1 = load_object_from_disk(user_working_dir.get() + f'{input.select_stat_det_1.get()}.pkl')
-            Station_2 = load_object_from_disk(user_working_dir.get() + f'{input.select_stat_det_2.get()}.pkl')
-            Station_3 = load_object_from_disk(user_working_dir.get() + f'{input.select_stat_det_3.get()}.pkl')
+            logger.info("Loading Station 1")
+
+            Station_1 = generate_station_object(input.select_stat_det_1.get())
+            logger.info("Done Loading Station 1")
+            logger.info("Loading Station 2 ")
+            Station_2 = generate_station_object(input.select_stat_det_2.get())
+            logger.info("Done Loading Station 2")
+            logger.info("Loading Station 3")
+            Station_3 = generate_station_object(input.select_stat_det_3.get())
+            logger.info("Done Loading Station 3")
             logger.info("Stations Loaded Successfully")
 
             det1 = Detection(Station_1, float(input.stat_1_strength.get()), int(input.select_ant_det_1.get()) - 1)
@@ -365,6 +394,27 @@ def server(input,output,session):
     async def load_from_indexeddb(key):
         await session.send_custom_message("load_from_indexeddb", {"key": key})
 
+    async def generate_station_object(name):
+        load_from_indexeddb(input.select_stat_det_1.get())
+
+        Station_JSON = input.loaded_value()
+
+        if not Station_JSON:
+            logger.error(f"No data found for station: {name}")
+            return
+
+        station_data = json.loads(Station_JSON)
+
+        # Recreate the Station object
+        Station_1 = station.Station(name=station_data['name'],lat=station_data['lat'],long=station_data['long'],alt = station_data['alt'],antennas = station_data['antennas']) 
+
+
+        for i in range(len(Station_1.antennas)): 
+            if not isinstance(Station_1.antennas[i], str):
+                Station_1.antennas[i] = base64_string_to_object(Station_1.antennas[i])
+
+        return Station_1
+
 
 def object_to_base64_string(obj):
     """
@@ -402,6 +452,7 @@ def base64_string_to_object(base64_string):
     obj = pickle.loads(pickle_bytes)
     
     return obj
+
 
 
 
