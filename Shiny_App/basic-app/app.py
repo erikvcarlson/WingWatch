@@ -137,7 +137,7 @@ app_ui = ui.page_fluid(
         try {
             const value = await loadFromDB(message.key);
             console.log("Loaded value from IndexedDB:", value); // Add this log
-            Shiny.setInputValue("loaded_value", value);
+            Shiny.setInputValue("loaded_value", value, {priority: "event"});
         } catch (error) {
             console.error("Error loading from IndexedDB:", error); // Add error logging
             Shiny.setInputValue("loaded_value", null);
@@ -176,15 +176,27 @@ def server(input,output,session):
             ui.update_select("select_stat_det_3", choices=keys)
             for key in keys:
                 try:
-                    logger.info(f"The value of markers before is: {markers.get()}")
+                    logger.info(f"Processing key: {key}")
+
+                    # Load the station data from IndexedDB
                     await load_from_indexeddb(key)
-                    await asyncio.sleep(0.1)
-                    logger.info(f"The value of markers after is: {input.loaded_value()}")
-                    await asyncio.sleep(0.1)                    
-                    logger.info(f"The value of markers after is: {markers.get()}")
+
+                    logger.info(f"Processing your mom's key.")
+                    logger.info('Attempting to Grab Value')
+                    logger.info(f'Value is {input.loaded_value.get()}')
+                    # Wait until `loaded_value` updates
+                    while input.loaded_value.get() is None:
+                        await asyncio.sleep(0.1)
+                        logger.info(f"Yo mamma's so fat...")
+
+                    # Process the loaded value
+                    process_loaded_value(input.loaded_value.get())
+
+                    await asyncio.sleep(0.1)  # Small delay to allow the next loop iteration
+
                 except Exception as err:
                     logger.error(f"Error during key processing: {err}")
-            
+
         except Exception as outer_err:
             logger.error(f"Error in handle_list_keys: {outer_err}")
         
@@ -192,28 +204,32 @@ def server(input,output,session):
     
 
     # Use reactive context for loaded_value
-    @reactive.effect
-    @reactive.event(input.loaded_value)  # Make loaded_value reactive
-    def process_loaded_value():
+    #@reactive.effect
+    #@reactive.event(input.loaded_value)  # Make loaded_value reactive
+    def process_loaded_value(loaded_value):
+        """Processes the loaded station data."""
         logger.info("Entered process_loaded_value")
         try:
-            if input.loaded_value() is not None:
-                Station = json.loads(input.loaded_value())
+            if loaded_value is not None:
+                Station = json.loads(loaded_value)
                 logger.info(f"Loaded station data: {Station}")
-                point = [Station['name'],Station['lat'], Station['long']]
+                point = [Station['name'], Station['lat'], Station['long']]
                 logger.info('Point for map generated')
+                
                 logger.info('Requesting markers value')
                 current_markers = markers.get()
 
-                logger.info(f'Markers Value Retrived in process_loaded_value. The value is: {current_markers}')
+                logger.info(f'Markers Value Retrieved in process_loaded_value. The value is: {current_markers}')
+                
+                current_markers.append(point)  # Append new point
+                markers.set(current_markers)
 
-                current_markers = current_markers + [point]
-                markers.set(current_markers)  # Add the new marker to the list
-                logger.info(f'Markers Value after in process_loaded_value. The value is: {current_markers}')                               
+                logger.info(f'Markers Value after update: {current_markers}')
             else:
-                logger.warning(f"Value for key is None.")
+                logger.warning("Loaded value is None.")
         except Exception as err:
-            logger.error(f"Process Loaded Value Error: {err} ")
+            logger.error(f"Error in process_loaded_value: {err}")
+
 
     @render_plotly
     @reactive.event(markers)
@@ -368,23 +384,23 @@ def server(input,output,session):
 
             logger.info("Ready to Draw the Circle")
 
-            circle = Circle()
-            logger.info('Circle Initialized')
-            circle.location = (Detection_pos[0],Detection_pos[1])
-            logger.info("Position Assigned")
+            # circle = Circle()
+            # logger.info('Circle Initialized')
+            # circle.location = (Detection_pos[0],Detection_pos[1])
+            # logger.info("Position Assigned")
             
-            circle.radius = int(radius)
+            # circle.radius = int(radius)
 
-            logger.info("Circle Given Radius")
+            # logger.info("Circle Given Radius")
 
-            circle.color = "green"
-            circle.fill_color = "green"
+            # circle.color = "green"
+            # circle.fill_color = "green"
 
-            m = map.widget
-            m.add(circle)
+            # m = map.widget
+            # m.add(circle)
             
-            pc.point_in_hull(np.array([293, 211, 27]), hull_of_intersections)
-            logger.info("Function Completed Successfully")
+            # pc.point_in_hull(np.array([293, 211, 27]), hull_of_intersections)
+            # logger.info("Function Completed Successfully")
         except Exception as err:
             logger.error(err)
 
