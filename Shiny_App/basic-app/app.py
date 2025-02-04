@@ -152,102 +152,86 @@ app_ui = ui.page_fluid(
     </script>
     """),
 )
+
 # Shiny app server logic
 def server(input,output,session):
-    markers = reactive.value([])
-
+    fig_store = reactive.Value(None)
+    
     @reactive.effect
     async def startup_fn():
-        await session.send_custom_message("list_keys", {})
-        asyncio.sleep(0.1)
-        logger.info("Triggered list_keys message handler in JavaScript")
-        time.sleep(1)
-        logger.info('Start-up Script Ran')
-        
+        try:    
+            logger.info(f'Value of fig_store: {fig_store.get()}')
+            await session.send_custom_message("list_keys", {})
+            asyncio.sleep(0.1)
+            logger.info("Triggered list_keys message handler in JavaScript")
+            logger.info('Start-up Script Ran')
+        except:
+            logger.exception((f"Error during startup processing:"))
+            
     @reactive.effect
     @reactive.event(input.all_keys)
-    async def handle_list_keys():
+    def update_list_of_choices():
+        keys = input.all_keys()  # Retrieve the list of keys from IndexedDB
+        logger.info(f"Retrieved keys from IndexedDB: {keys}")
+        ui.update_select("select_stat", choices=keys)
+        ui.update_select("select_stat_det_1", choices=keys)
+        ui.update_select("select_stat_det_2", choices=keys)
+        ui.update_select("select_stat_det_3", choices=keys)
+        logger.info('Changed the list successfully.')
+
+    @reactive.calc
+    async def callForStationtoLoadMap():
+        logger.info('Calling for a station to be loaded')
         try:
-            keys = input.all_keys()  # Retrieve the list of keys from IndexedDB
-            logger.info(f"Retrieved keys from IndexedDB: {keys}")
-            ui.update_select("select_stat", choices=keys)
-            ui.update_select("select_stat_det_1", choices=keys)
-            ui.update_select("select_stat_det_2", choices=keys)
-            ui.update_select("select_stat_det_3", choices=keys)
-            for key in keys:
-                try:
-                    logger.info(f"Processing key: {key}")
+            key = input.keys_for_loadings()[0]
+            logger.info(f'The value of keys_for_loadings is: {key}')
+            await load_from_indexeddb(key)
+            asyncio.wait(0.1)
+            logger.info('Station Called; Should be heading to load_singular_station_for_map next')
+        except:
+            logger.exception('callForStationtoLoadMap Traceback: ')
+        return 
 
-                    # Load the station data from IndexedDB
-                    await load_from_indexeddb(key)
+    #@reactive.effect()
+    @render_plotly()
+    @reactive.event(input.keys_for_loading)
+    def load_singular_station_for_map(ignore_init = False):
+        _ = callForStationtoLoadMap()
 
-                    logger.info(f"Processing your mom's key.")
-                    logger.info('Attempting to Grab Value')
-                    logger.info(f'Value is {input.loaded_value.get()}')
-                    # Wait until `loaded_value` updates
-                    while input.loaded_value.get() is None:
-                        await asyncio.sleep(0.1)
-                        logger.info(f"Yo mamma's so fat...")
-
-                    # Process the loaded value
-                    process_loaded_value(input.loaded_value.get())
-
-                    await asyncio.sleep(0.1)  # Small delay to allow the next loop iteration
-
-                except Exception as err:
-                    logger.error(f"Error during key processing: {err}")
-
-        except Exception as outer_err:
-            logger.error(f"Error in handle_list_keys: {outer_err}")
         
-        logger.info('handle_list_keys function is complete.')
-    
-
-    # Use reactive context for loaded_value
-    #@reactive.effect
-    #@reactive.event(input.loaded_value)  # Make loaded_value reactive
-    def process_loaded_value(loaded_value):
-        """Processes the loaded station data."""
-        logger.info("Entered process_loaded_value")
+        logger.info("Entered load_singular_station_for_map")
         try:
-            if loaded_value is not None:
-                Station = json.loads(loaded_value)
+            if input.loaded_value() is not [None]:
+                Station = json.loads(input.loaded_value())
                 logger.info(f"Loaded station data: {Station}")
                 point = [Station['name'], Station['lat'], Station['long']]
-                logger.info('Point for map generated')
-                
-                logger.info('Requesting markers value')
-                current_markers = markers.get()
-
-                logger.info(f'Markers Value Retrieved in process_loaded_value. The value is: {current_markers}')
-                
-                current_markers.append(point)  # Append new point
-                markers.set(current_markers)
-
-                logger.info(f'Markers Value after update: {current_markers}')
-            else:
-                logger.warning("Loaded value is None.")
+                logger.info("Point for map generated")    
+                fig = fig_store.get()
+                logger.info("Retrived active map")
+                fig.add_trace(px.scatter_mapbox(lat=[Station['lat']],lon=[Station['long']],hovertext=[Station['name']]).data[0])
+                logger.info("Added Station Point")          
+                # Update the stored figure
+                fig_store.set(fig)
+                logger.info('Updated Figure; Map should run next')
+                try:
+                    keys_for_loading = keys_for_loading[1:]
+                except:
+                    pass
         except Exception as err:
-            logger.error(f"Error in process_loaded_value: {err}")
+            logger.error(f"Error in load_singular_station_for_map: {err}")
+
+
+
+
+
 
 
     @render_plotly
-    @reactive.event(markers)
-    def map():
-        logger.info("Markers have changed, updating the map.")
-        logger.info(f"The value of markers is: {markers.get()}") 
-        if markers.get() != []:
-            # Create a DataFrame with markers data
-            df = pd.DataFrame(markers.get(), columns=['Name', 'Lat', 'Long'])
-            fig = px.scatter_mapbox(
-                df,
-                lat="Lat",
-                lon="Long",
-                hover_name='Name',
-                zoom=10
-            )
-            logger.info(f"Map updated with {len(markers.get())} markers.")
-        else:
+    @reactive.event(fig_store)
+    def map(ignore_init = False):
+        logger.info("Entering the Map Function")
+        if fig_store.get() == 1:
+            logger.info("fig_store is reporting as empty")
             # Create an empty DataFrame
             df = pd.DataFrame(columns=['Name', 'Lat', 'Long'])
             fig = px.scatter_mapbox(
@@ -260,8 +244,14 @@ def server(input,output,session):
             )
             logger.info("Map updated with no markers (default center 41, -71).")
         
-        # Set Mapbox token
-        fig.update_layout(mapbox_style="open-street-map") 
+            # Set Mapbox token
+            fig.update_layout(mapbox_style="open-street-map") 
+
+            fig_store.set(fig)
+
+        else:
+            fig = fig_store.get()
+
         return fig
 
     

@@ -14,7 +14,7 @@ def clean_motus_Tag_data(data_csv:str,calibration_tags_list,start_date="",end_da
     start_date: str; Not implemented yet. The start date (YYYY-MM-DD) of when the current station configuration started. 3
     Used when wanting to exclude data before a station was moved or upgraded to its current configuration.
 
-    end_date: str; Not implemented yet. The end date (YYYY-MM-DD) of when the station left the configuration of question. 
+    end_date: str; Required. The end date (YYYY-MM-DD) of when the station left the configuration of question. 
     Used when wanting to exclude data after a station was moved or upgraded to a new configuration.
    
 
