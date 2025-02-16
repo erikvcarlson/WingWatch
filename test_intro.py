@@ -6,6 +6,10 @@ import numpy as np
 import scipy.spatial as ss
 import fake_data_gen_funcs as fdgc
 import pytest
+import WingWatch.Equipment.station as station
+import WingWatch.Equipment.antenna as ant
+
+
 
 #FUNCTION SET TO BE TEST - TOOLS
 
@@ -282,6 +286,33 @@ def test_check_constraints_bubbles_should_be_smaller():
     intersections,hull_of_intersections = PTL.check_constraints(region_1,region_2,max_speed=1,time_stamp_difference=1)
   
     assert intersections[:,0].max() <= 2 and intersections[:,0].min() >= 1
+
+
+def test_manipulating_stations():
+    #Generate a station
+    Station1 = station.Station('Station1',0,0)
+
+    #Generate an arbitary antenna
+    a1 = ant.Antenna('1','test',0,434)
+
+
+    Station1.add_antenna(a1,1)
+
+    assert len(Station1.antennas) == 1
+
+
+    Station1.add_antenna(a1,3)
+
+
+    assert Station1.antennas[2] == a1
+    assert Station1.antennas[1] == None
+
+
+    Station1.add_antenna(a1,4)
+
+    assert Station1.antennas[2] == a1
+    assert Station1.antennas[3] == a1
+    assert Station1.antennas[1] == None
 
 
 

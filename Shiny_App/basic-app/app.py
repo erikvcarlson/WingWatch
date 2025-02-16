@@ -1,5 +1,4 @@
-#from ipyleaflet import Map, basemaps, Marker, Circle,MarkerCluster
-#from ipywidgets import Layout  
+
 import plotly.express as px
 
 from shiny import App, reactive, ui,render
@@ -164,7 +163,6 @@ def server(input,output,session):
             await session.send_custom_message("list_keys", {})
             asyncio.sleep(0.1)
             logger.info("Triggered list_keys message handler in JavaScript")
-            logger.info('Start-up Script Ran')
         except:
             logger.exception((f"Error during startup processing:"))
             
@@ -179,50 +177,20 @@ def server(input,output,session):
         ui.update_select("select_stat_det_3", choices=keys)
         logger.info('Changed the list successfully.')
 
-    @reactive.calc
-    async def callForStationtoLoadMap():
-        logger.info('Calling for a station to be loaded')
-        try:
-            key = input.keys_for_loadings()[0]
-            logger.info(f'The value of keys_for_loadings is: {key}')
-            await load_from_indexeddb(key)
-            asyncio.wait(0.1)
-            logger.info('Station Called; Should be heading to load_singular_station_for_map next')
-        except:
-            logger.exception('callForStationtoLoadMap Traceback: ')
-        return 
-
-    #@reactive.effect()
-    @render_plotly()
-    @reactive.event(input.keys_for_loading)
-    def load_singular_station_for_map(ignore_init = False):
-        _ = callForStationtoLoadMap()
-
+    @reactive.effect()
+    @reactive.event()
+    async def add_point_to_map():
         
-        logger.info("Entered load_singular_station_for_map")
-        try:
-            if input.loaded_value() is not [None]:
-                Station = json.loads(input.loaded_value())
-                logger.info(f"Loaded station data: {Station}")
-                point = [Station['name'], Station['lat'], Station['long']]
-                logger.info("Point for map generated")    
-                fig = fig_store.get()
-                logger.info("Retrived active map")
-                fig.add_trace(px.scatter_mapbox(lat=[Station['lat']],lon=[Station['long']],hovertext=[Station['name']]).data[0])
-                logger.info("Added Station Point")          
-                # Update the stored figure
-                fig_store.set(fig)
-                logger.info('Updated Figure; Map should run next')
-                try:
-                    keys_for_loading = keys_for_loading[1:]
-                except:
-                    pass
-        except Exception as err:
-            logger.error(f"Error in load_singular_station_for_map: {err}")
+        load_from_indexeddb(input.select_stat())    
+        Station_JSON = input.loaded_value()
+        if not Station_JSON:
+            logger.error(f"No data found for station: {key}")
+            return
 
+        station_data = json.loads(Station_JSON)
 
-
-
+        # Recreate the Station object
+        Station_1 = station.Station(name=station_data['name'],lat=station_data['lat'],long=station_data['long'],alt = station_data['alt'],antennas = station_data['antennas']) 
 
 
 

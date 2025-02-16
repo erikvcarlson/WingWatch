@@ -14,14 +14,32 @@ class Station:
         self.long = long # Longitude of the station - float
         self.alt = alt
         self.antennas = [] #list of antennas to store antenna objects assigned to the station
-    def add_antenna(self, antenna):
-        #check if the item we are adding to the antenna list is an antenna, and then add it to the antenna list
-        #return an error if the item is invalid. 
-        if isinstance(antenna, ant.Antenna):
-            self.antennas.append(antenna)
-            print(f"{antenna.name} added to {self.name}'s antennas.")
-        else:
+        
+    def add_antenna(self, antenna, antenna_number=None):
+        # Default to appending if no specific number is given
+        if antenna_number is None:
+            antenna_number = len(self.antennas)
+
+        if not isinstance(antenna, ant.Antenna):
             print("Invalid antenna object. Please provide an Antenna instance.")
+            return
+        
+        if antenna_number >= len(self.antennas):
+            # Create a new list with the necessary size, copying over existing values
+            new_antennas = [None] * (antenna_number)
+            
+            # Copy existing antennas into the new list
+            for i in range(len(self.antennas)):
+                new_antennas[i] = self.antennas[i]
+
+            # Replace the old list with the new one
+            self.antennas = new_antennas
+
+        # Add the antenna at the specified index
+        self.antennas[antenna_number-1] = antenna
+        print(f"{antenna.name} added to {self.name}'s antennas at position {antenna_number}.")
+
+
     def list_antennas(self):
         #mostly meant for debugging and information
         #simply iterates over the antennas added to the antenna list and prints the name of the antenna and the frequency 
