@@ -8,12 +8,12 @@ import warnings
 
 
 class Station:
-    def __init__(self,name,lat,long,alt=0):
+    def __init__(self,name,lat,long,alt=0,antennas=[]):
         self.name = name #Station name - string
         self.lat = lat # Latitude of the station - float 
         self.long = long # Longitude of the station - float
         self.alt = alt
-        self.antennas = [] #list of antennas to store antenna objects assigned to the station
+        self.antennas = antennas #list of antennas to store antenna objects assigned to the station
         
     def add_antenna(self, antenna, antenna_number=None):
         # Default to appending if no specific number is given
@@ -24,7 +24,7 @@ class Station:
             print("Invalid antenna object. Please provide an Antenna instance.")
             return
         
-        if antenna_number >= len(self.antennas):
+        if antenna_number-1 >= len(self.antennas):
             # Create a new list with the necessary size, copying over existing values
             new_antennas = [None] * (antenna_number)
             
