@@ -31,7 +31,7 @@ class Antenna:
         self.rad_pattern = rotated_df
     def convert_to_lat_long(self,station):
         # Earth radius (mean radius in meters)
-        earth_radius = 6371000  # Approximate value for the Earth's mean radius
+        earth_radius = 6371000  # Approximate value for the Earth's mean radius  
 
         # Convert station's latitude and longitude from degrees to radians
         lat1 = math.radians(station.lat)
